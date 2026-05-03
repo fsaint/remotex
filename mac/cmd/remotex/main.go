@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
@@ -70,6 +71,10 @@ func newNewCmd() *cobra.Command {
 				return nil
 			}
 			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("daemon returned status %d", resp.StatusCode)
+			}
 			if resp.StatusCode != http.StatusCreated {
 				return fmt.Errorf("daemon returned %d", resp.StatusCode)
 			}
@@ -100,6 +105,10 @@ func newListCmd() *cobra.Command {
 				return fmt.Errorf("reach daemon: %w", err)
 			}
 			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("daemon returned status %d", resp.StatusCode)
+			}
 
 			var sessions []struct {
 				Name      string    `json:"name"`
@@ -142,7 +151,8 @@ func newKillCmd() *cobra.Command {
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "warn: could not reach daemon: %v\n", err)
 				} else {
-					resp.Body.Close()
+					io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
 				}
 			}
 
