@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -25,10 +26,15 @@ func main() {
 	}
 	mgr.PruneDeadPIDs()
 
-	tailscaleAddr, err := resolveTailscaleAddr()
-	if err != nil {
-		log.Printf("warn: tailscale interface not found, binding to all interfaces: %v", err)
-		tailscaleAddr = "0.0.0.0"
+	// REMOTEX_BIND_ADDR overrides interface detection (used in tests).
+	tailscaleAddr := os.Getenv("REMOTEX_BIND_ADDR")
+	if tailscaleAddr == "" {
+		var err error
+		tailscaleAddr, err = resolveTailscaleAddr()
+		if err != nil {
+			log.Printf("warn: tailscale interface not found, binding to all interfaces: %v", err)
+			tailscaleAddr = "0.0.0.0"
+		}
 	}
 
 	srv := daemon.NewServer(mgr, cfg.APIKey, tailscaleAddr, cfg.TailscaleHost, cfg.DaemonPort)

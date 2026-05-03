@@ -137,11 +137,8 @@ func newNewCmd() *cobra.Command {
 			}
 			defer resp.Body.Close()
 
-			if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 				return fmt.Errorf("daemon returned status %d", resp.StatusCode)
-			}
-			if resp.StatusCode != http.StatusCreated {
-				return fmt.Errorf("daemon returned %d", resp.StatusCode)
 			}
 
 			fmt.Printf("Session %q created (tmux pid %d)\n", name, pid)
