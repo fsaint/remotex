@@ -83,16 +83,3 @@ func (s *Server) requireAPIKey(next http.Handler) http.Handler {
 	})
 }
 
-// Stub handlers — will be fully implemented in Task 7
-func (s *Server) handleRegisterSession(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
-}
-func (s *Server) handleUnregisterSession(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNoContent)
-}
-func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
