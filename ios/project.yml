@@ -1,0 +1,43 @@
+name: RemoteX
+options:
+  bundleIdPrefix: com.remotex
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "15.0"
+  createIntermediateGroups: true
+
+packages:
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    from: 1.0.0
+
+targets:
+  RemoteX:
+    type: application
+    platform: iOS
+    sources:
+      - path: RemoteX
+        excludes:
+          - "**/.DS_Store"
+    info:
+      path: RemoteX/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.remotex.app
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        ENABLE_PREVIEWS: "YES"
+    dependencies:
+      - package: SwiftTerm
+
+  RemoteXTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: RemoteXTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.remotex.tests
+        SWIFT_VERSION: "5.9"
+    dependencies:
+      - target: RemoteX
