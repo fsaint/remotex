@@ -35,6 +35,10 @@ targets:
     platform: iOS
     sources:
       - path: RemoteXTests
+        excludes:
+          - "**/.DS_Store"
+    info:
+      path: RemoteXTests/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.remotex.tests
