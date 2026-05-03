@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/fsaint/remotex/internal/session"
 	"github.com/go-chi/chi/v5"
@@ -18,6 +19,7 @@ type Server struct {
 	tailscaleHost string
 	port          int
 	httpSrv       *http.Server
+	connectMu     sync.Mutex
 }
 
 func NewServer(mgr *session.Manager, apiKey, host, tailscaleHost string, port int) *Server {

@@ -35,7 +35,10 @@ func (s *Server) handleRegisterSession(w http.ResponseWriter, r *http.Request) {
 		StartedAt: req.StartedAt,
 		Status:    session.StatusLive,
 	})
-	s.mgr.Save()
+	if err := s.mgr.Save(); err != nil {
+		http.Error(w, "failed to persist session", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
 }
 
@@ -50,7 +53,10 @@ func (s *Server) handleUnregisterSession(w http.ResponseWriter, r *http.Request)
 		mosh.Stop(sess.MoshPID)
 	}
 	s.mgr.Remove(name)
-	s.mgr.Save()
+	if err := s.mgr.Save(); err != nil {
+		http.Error(w, "failed to persist session", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -75,6 +81,16 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	if sess.Status == session.StatusDead {
 		http.Error(w, "session is dead", http.StatusGone)
+		return
+	}
+
+	s.connectMu.Lock()
+	defer s.connectMu.Unlock()
+
+	// Re-fetch after acquiring lock (state may have changed)
+	sess, ok = s.mgr.Get(name)
+	if !ok {
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 
@@ -107,7 +123,10 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 		sess.MoshPort = info.Port
 		sess.MoshKey = info.Key
 	})
-	s.mgr.Save()
+	if err := s.mgr.Save(); err != nil {
+		http.Error(w, "failed to save session state", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(connectResponse{
