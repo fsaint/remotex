@@ -84,7 +84,7 @@ func newSetupCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("generate QR code: %w", err)
 			}
-			fmt.Println("\nScan this QR code with the RemoteX iOS app:\n")
+			fmt.Print("\nScan this QR code with the RemoteX iOS app:\n\n")
 			fmt.Println(qr.ToSmallString(false))
 
 			fmt.Println("Setup complete!")
