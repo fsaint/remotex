@@ -8,10 +8,13 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/skip2/go-qrcode"
 	"github.com/spf13/cobra"
 	"github.com/fsaint/remotex/internal/config"
+	"github.com/fsaint/remotex/internal/setup"
 	tmuxpkg "github.com/fsaint/remotex/internal/tmux"
 )
 
@@ -27,7 +30,69 @@ func main() {
 	}
 }
 
-func newSetupCmd() *cobra.Command  { return &cobra.Command{Use: "setup"} }
+func newSetupCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "setup",
+		Short: "First-time setup: generate keys, configure daemon, print QR code",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Println("Generating SSH keypair...")
+			if err := setup.GenerateKeys(); err != nil {
+				return fmt.Errorf("generate keys: %w", err)
+			}
+
+			fmt.Println("Generating API key...")
+			apiKey, err := setup.GenerateAPIKey()
+			if err != nil {
+				return fmt.Errorf("generate API key: %w", err)
+			}
+
+			fmt.Println("Detecting Tailscale hostname...")
+			host, err := setup.TailscaleHost()
+			if err != nil {
+				return fmt.Errorf("detect tailscale host (is tailscale running?): %w", err)
+			}
+			fmt.Printf("Tailscale hostname: %s\n", host)
+
+			privKeyPath := filepath.Join(config.Dir(), "id_ed25519")
+			privKeyBytes, err := os.ReadFile(privKeyPath)
+			if err != nil {
+				return fmt.Errorf("read private key: %w", err)
+			}
+
+			cfg := &config.Config{
+				APIKey:        apiKey,
+				TailscaleHost: host,
+				DaemonPort:    7654,
+				SSHKeyPath:    privKeyPath,
+			}
+			if err := config.Save(cfg); err != nil {
+				return fmt.Errorf("save config: %w", err)
+			}
+
+			// Encode pairing payload as JSON for QR code
+			payload := map[string]string{
+				"host":            host,
+				"api_key":         apiKey,
+				"ssh_private_key": string(privKeyBytes),
+			}
+			qrData, err := json.Marshal(payload)
+			if err != nil {
+				return fmt.Errorf("encode QR payload: %w", err)
+			}
+
+			qr, err := qrcode.New(string(qrData), qrcode.Medium)
+			if err != nil {
+				return fmt.Errorf("generate QR code: %w", err)
+			}
+			fmt.Println("\nScan this QR code with the RemoteX iOS app:\n")
+			fmt.Println(qr.ToSmallString(false))
+
+			fmt.Println("Setup complete!")
+			fmt.Println("Start the daemon with: remotex-daemon")
+			return nil
+		},
+	}
+}
 func newNewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "new <name>",
