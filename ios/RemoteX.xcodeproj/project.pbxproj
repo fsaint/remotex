@@ -10,6 +10,7 @@
 		049F53775D3EAF6DD3A23D4B /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF7CC6D244117D6FFB69B979 /* Session.swift */; };
 		05B86FC2C64006DB481B9D46 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 7C8B5639CF8E1A5781A0EC49 /* SwiftTerm */; };
 		16B8F24EEEF4A54EA5ECB8D0 /* RemoteXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C6F9F6285D5B4E7368BF6A /* RemoteXTests.swift */; };
+		1CA03778450AC55900B1AE84 /* MoshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41914FEF539B9545AE76FADA /* MoshSession.swift */; };
 		1FE4D03A1733A9CE912E1449 /* SetupViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C6F0472AEFA9F64814D5C9 /* SetupViewTests.swift */; };
 		2007098B19A6C0025B932798 /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2976A2D900F61B92083F83 /* Credentials.swift */; };
 		2B70033CFA4EDF5222DB763A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24C17D5A65C85C8524157327 /* SessionsView.swift */; };
@@ -44,6 +45,7 @@
 		3533BC658725315B199B9E55 /* ConnectInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectInfo.swift; sourceTree = "<group>"; };
 		36C4127270A424F1556BF4A4 /* KeychainStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStoreTests.swift; sourceTree = "<group>"; };
 		388BDF5E2B13A146C02DA4B9 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		41914FEF539B9545AE76FADA /* MoshSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoshSession.swift; sourceTree = "<group>"; };
 		472AE0561AF358C3EB0B712B /* RemoteXTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = RemoteXTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		79AD85DEC9FEF7B7BE6C5B9F /* DaemonClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonClient.swift; sourceTree = "<group>"; };
 		82D07A12F4ECFB379899B990 /* RemoteXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteXApp.swift; sourceTree = "<group>"; };
@@ -136,6 +138,7 @@
 			children = (
 				79AD85DEC9FEF7B7BE6C5B9F /* DaemonClient.swift */,
 				069F8FF0C3896AADEE35191B /* KeychainStore.swift */,
+				41914FEF539B9545AE76FADA /* MoshSession.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -244,6 +247,7 @@
 				2007098B19A6C0025B932798 /* Credentials.swift in Sources */,
 				65129A67F8436BE87722772A /* DaemonClient.swift in Sources */,
 				3741ABB063D4191FEBF0D118 /* KeychainStore.swift in Sources */,
+				1CA03778450AC55900B1AE84 /* MoshSession.swift in Sources */,
 				3AC3214CF57042CB44798DFC /* RemoteXApp.swift in Sources */,
 				049F53775D3EAF6DD3A23D4B /* Session.swift in Sources */,
 				2B70033CFA4EDF5222DB763A /* SessionsView.swift in Sources */,
