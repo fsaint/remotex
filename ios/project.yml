@@ -29,6 +29,11 @@ targets:
         ENABLE_PREVIEWS: "YES"
     dependencies:
       - package: SwiftTerm
+      - framework: Frameworks/mosh.xcframework
+        embed: false
+      - framework: Frameworks/Protobuf_C_.xcframework
+        embed: true
+      - sdk: libz.tbd
 
   RemoteXTests:
     type: bundle.unit-test

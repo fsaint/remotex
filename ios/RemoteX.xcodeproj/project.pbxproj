@@ -13,6 +13,7 @@
 		1CA03778450AC55900B1AE84 /* MoshSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41914FEF539B9545AE76FADA /* MoshSession.swift */; };
 		1FE4D03A1733A9CE912E1449 /* SetupViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C6F0472AEFA9F64814D5C9 /* SetupViewTests.swift */; };
 		2007098B19A6C0025B932798 /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2976A2D900F61B92083F83 /* Credentials.swift */; };
+		28B052D98D0EA447450A6AB8 /* mosh.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = ABEEE9A46E13DE592CCF6156 /* mosh.xcframework */; };
 		2B70033CFA4EDF5222DB763A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24C17D5A65C85C8524157327 /* SessionsView.swift */; };
 		3741ABB063D4191FEBF0D118 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 069F8FF0C3896AADEE35191B /* KeychainStore.swift */; };
 		384566E3D6A06EC1841569A2 /* DaemonClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3A72250BE39F7B6D6F9343 /* DaemonClientTests.swift */; };
@@ -25,7 +26,10 @@
 		7EF36016686DC133FD46ED2A /* TerminalSizeHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEF9889BE0158D306AED2387 /* TerminalSizeHelper.swift */; };
 		867B4FA84C87316F34FD46FA /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A1AD15285B32AC77CD05B4 /* AppRouter.swift */; };
 		9E4C39670D51EF78F309E17C /* KeychainStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C4127270A424F1556BF4A4 /* KeychainStoreTests.swift */; };
+		A216F6C75EACA7CD90E4412D /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B4B266FE97C207321186BB77 /* libz.tbd */; };
 		C2EBC96CBB779B2AC3FDDADD /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388BDF5E2B13A146C02DA4B9 /* SetupView.swift */; };
+		D3E27D5F3C50EA6C0FA4814A /* Protobuf_C_.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = A64AC6CB4E50AE53B7BEC22B /* Protobuf_C_.xcframework */; };
+		FAE8AD05B395DD1A9F7C6855 /* Protobuf_C_.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = A64AC6CB4E50AE53B7BEC22B /* Protobuf_C_.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,6 +41,20 @@
 			remoteInfo = RemoteX;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		09F470DC47A4E82459565AF8 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				FAE8AD05B395DD1A9F7C6855 /* Protobuf_C_.xcframework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		069F8FF0C3896AADEE35191B /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
@@ -55,8 +73,11 @@
 		98596D9E2BAF1783C5DF30E2 /* RemoteX.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RemoteX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		999115FD18C68588390C1EAA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9D3A72250BE39F7B6D6F9343 /* DaemonClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonClientTests.swift; sourceTree = "<group>"; };
+		A64AC6CB4E50AE53B7BEC22B /* Protobuf_C_.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Protobuf_C_.xcframework; path = Frameworks/Protobuf_C_.xcframework; sourceTree = "<group>"; };
+		ABEEE9A46E13DE592CCF6156 /* mosh.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = mosh.xcframework; path = Frameworks/mosh.xcframework; sourceTree = "<group>"; };
 		AF7CC6D244117D6FFB69B979 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		B002072AAF483F1B6C7282AA /* TerminalSizeHelperTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSizeHelperTests.swift; sourceTree = "<group>"; };
+		B4B266FE97C207321186BB77 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		D4A1AD15285B32AC77CD05B4 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		E1C6F9F6285D5B4E7368BF6A /* RemoteXTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteXTests.swift; sourceTree = "<group>"; };
 		FEF9889BE0158D306AED2387 /* TerminalSizeHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSizeHelper.swift; sourceTree = "<group>"; };
@@ -69,6 +90,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				05B86FC2C64006DB481B9D46 /* SwiftTerm in Frameworks */,
+				28B052D98D0EA447450A6AB8 /* mosh.xcframework in Frameworks */,
+				D3E27D5F3C50EA6C0FA4814A /* Protobuf_C_.xcframework in Frameworks */,
+				A216F6C75EACA7CD90E4412D /* libz.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,11 +107,22 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		2B8AD5D70EC07DD11088A444 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B4B266FE97C207321186BB77 /* libz.tbd */,
+				ABEEE9A46E13DE592CCF6156 /* mosh.xcframework */,
+				A64AC6CB4E50AE53B7BEC22B /* Protobuf_C_.xcframework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		2BD85F9650F116FF55CA994C = {
 			isa = PBXGroup;
 			children = (
 				6DAEFA8BE6B5407C84D42BF6 /* RemoteX */,
 				5EA69DC4399C0FFA22C1700F /* RemoteXTests */,
+				2B8AD5D70EC07DD11088A444 /* Frameworks */,
 				55772596F04F1E58C88FBD39 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -194,6 +229,7 @@
 			buildPhases = (
 				F54DC4168E2F6F996A6643CF /* Sources */,
 				8F44E41881B26AB0E5CCFF1D /* Frameworks */,
+				09F470DC47A4E82459565AF8 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -289,6 +325,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"Frameworks\"",
+				);
 				INFOPLIST_FILE = RemoteX/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -344,6 +384,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"Frameworks\"",
+				);
 				INFOPLIST_FILE = RemoteX/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
