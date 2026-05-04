@@ -1,7 +1,7 @@
 import Foundation
 
-struct Session: Codable, Identifiable {
-    enum Status: String, Codable {
+struct Session: Codable, Identifiable, Hashable {
+    enum Status: String, Codable, Hashable {
         case live, dead
     }
 

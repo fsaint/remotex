@@ -12,6 +12,7 @@
 		16B8F24EEEF4A54EA5ECB8D0 /* RemoteXTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C6F9F6285D5B4E7368BF6A /* RemoteXTests.swift */; };
 		1FE4D03A1733A9CE912E1449 /* SetupViewTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32C6F0472AEFA9F64814D5C9 /* SetupViewTests.swift */; };
 		2007098B19A6C0025B932798 /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF2976A2D900F61B92083F83 /* Credentials.swift */; };
+		2B70033CFA4EDF5222DB763A /* SessionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24C17D5A65C85C8524157327 /* SessionsView.swift */; };
 		3741ABB063D4191FEBF0D118 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 069F8FF0C3896AADEE35191B /* KeychainStore.swift */; };
 		384566E3D6A06EC1841569A2 /* DaemonClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3A72250BE39F7B6D6F9343 /* DaemonClientTests.swift */; };
 		3AC3214CF57042CB44798DFC /* RemoteXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82D07A12F4ECFB379899B990 /* RemoteXApp.swift */; };
@@ -20,7 +21,7 @@
 		75EEC64B12B552D2976AB768 /* SessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30C78DDC67E32BB885C08EE5 /* SessionTests.swift */; };
 		867B4FA84C87316F34FD46FA /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A1AD15285B32AC77CD05B4 /* AppRouter.swift */; };
 		9E4C39670D51EF78F309E17C /* KeychainStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36C4127270A424F1556BF4A4 /* KeychainStoreTests.swift */; };
-		A4E4F3F64261E7DCD8D95614 /* SessionsStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03086818136E53541CD82EF0 /* SessionsStub.swift */; };
+		AE61652099BAACA066CCD87A /* TerminalStub.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E43513DC6E6D2746F94CB5 /* TerminalStub.swift */; };
 		C2EBC96CBB779B2AC3FDDADD /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 388BDF5E2B13A146C02DA4B9 /* SetupView.swift */; };
 /* End PBXBuildFile section */
 
@@ -35,8 +36,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		03086818136E53541CD82EF0 /* SessionsStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsStub.swift; sourceTree = "<group>"; };
 		069F8FF0C3896AADEE35191B /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		06E43513DC6E6D2746F94CB5 /* TerminalStub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalStub.swift; sourceTree = "<group>"; };
+		24C17D5A65C85C8524157327 /* SessionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionsView.swift; sourceTree = "<group>"; };
 		30C78DDC67E32BB885C08EE5 /* SessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTests.swift; sourceTree = "<group>"; };
 		32C6F0472AEFA9F64814D5C9 /* SetupViewTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupViewTests.swift; sourceTree = "<group>"; };
 		3533BC658725315B199B9E55 /* ConnectInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectInfo.swift; sourceTree = "<group>"; };
@@ -79,8 +81,9 @@
 		4C9A953346E2C5D174017938 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
-				03086818136E53541CD82EF0 /* SessionsStub.swift */,
+				24C17D5A65C85C8524157327 /* SessionsView.swift */,
 				388BDF5E2B13A146C02DA4B9 /* SetupView.swift */,
+				06E43513DC6E6D2746F94CB5 /* TerminalStub.swift */,
 			);
 			path = Screens;
 			sourceTree = "<group>";
@@ -243,8 +246,9 @@
 				3741ABB063D4191FEBF0D118 /* KeychainStore.swift in Sources */,
 				3AC3214CF57042CB44798DFC /* RemoteXApp.swift in Sources */,
 				049F53775D3EAF6DD3A23D4B /* Session.swift in Sources */,
-				A4E4F3F64261E7DCD8D95614 /* SessionsStub.swift in Sources */,
+				2B70033CFA4EDF5222DB763A /* SessionsView.swift in Sources */,
 				C2EBC96CBB779B2AC3FDDADD /* SetupView.swift in Sources */,
+				AE61652099BAACA066CCD87A /* TerminalStub.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
