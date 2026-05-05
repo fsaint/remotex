@@ -54,13 +54,26 @@ func (s *Server) buildRouter() http.Handler {
 }
 
 func (s *Server) Start() error {
+	router := s.buildRouter()
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
-	s.httpSrv = &http.Server{Addr: addr, Handler: s.buildRouter()}
+	s.httpSrv = &http.Server{Addr: addr, Handler: router}
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("listen %s: %w", addr, err)
 	}
+
+	// Also listen on localhost so the CLI can reach internal routes
+	// even when the daemon is bound to the Tailscale interface.
+	localAddr := fmt.Sprintf("127.0.0.1:%d", s.port)
+	if localAddr != addr {
+		localLn, err := net.Listen("tcp", localAddr)
+		if err == nil {
+			localSrv := &http.Server{Addr: localAddr, Handler: router}
+			go localSrv.Serve(localLn)
+		}
+	}
+
 	return s.httpSrv.Serve(ln)
 }
 
