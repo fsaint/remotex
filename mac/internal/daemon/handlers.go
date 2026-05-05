@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -94,17 +93,11 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Reuse existing mosh-server if still alive
-	if sess.MoshPID > 0 && sess.MoshPort > 0 && syscall.Kill(sess.MoshPID, 0) == nil {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(connectResponse{
-			Host: s.host,
-			Port: sess.MoshPort,
-			Key:  sess.MoshKey,
-		})
-		return
+	// Kill any existing mosh-server so we always get a fresh UDP binding.
+	// tmux provides session persistence; a fresh mosh-server avoids stale state.
+	if sess.MoshPID > 0 {
+		mosh.Stop(sess.MoshPID)
 	}
-	// Clear stale mosh info if process is dead
 	s.mgr.Update(name, func(sess *session.Session) {
 		sess.MoshPID = 0
 		sess.MoshPort = 0

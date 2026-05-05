@@ -8,10 +8,8 @@ struct TerminalView: View {
     @State private var connectInfo: ConnectInfo?
     @State private var connectError: String?
     @State private var isConnecting = true
-    @State private var showControls = false
-
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
 
             if isConnecting {
@@ -36,32 +34,28 @@ struct TerminalView: View {
                     .ignoresSafeArea(edges: [.top, .leading, .trailing])
             }
 
-            // Floating controls — tap anywhere on terminal to toggle
-            if showControls || connectError != nil {
-                Button {
-                    dismiss()
-                } label: {
-                    Label("Exit session", systemImage: "xmark.circle.fill")
-                        .font(.callout.bold())
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(.black.opacity(0.6))
-                        .clipShape(Capsule())
+            // Back button — always visible in top-left
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(session.name)
+                        .font(.system(size: 14, weight: .semibold))
                 }
-                .padding(.top, 56)
-                .padding(.trailing, 16)
-                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(.black.opacity(0.5))
+                .clipShape(Capsule())
             }
+            .padding(.top, 56)
+            .padding(.leading, 16)
         }
-        .ignoresSafeArea()
+        .ignoresSafeArea(edges: [.top, .leading, .trailing])
         .persistentSystemOverlays(.hidden)
         .navigationBarHidden(true)
-        .onTapGesture {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                showControls.toggle()
-            }
-        }
         .task { await connect() }
     }
 
@@ -121,22 +115,11 @@ final class TerminalViewWithMosh: UIView {
         moshSession.disconnect()
     }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        guard bounds.width > 0, bounds.height > 0 else { return }
-        let size = TerminalSizeHelper.size(for: bounds)
-        if !hasConnected {
-            hasConnected = true
-            Task {
-                try? await moshSession.connect(
-                    info: connectInfo,
-                    sshPrivateKey: sshKey,
-                    cols: size.cols,
-                    rows: size.rows
-                )
-            }
-        } else {
-            moshSession.resize(cols: size.cols, rows: size.rows)
+    // Open keyboard automatically when the view enters the window
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil {
+            terminalView.becomeFirstResponder()
         }
     }
 }
@@ -147,7 +130,9 @@ extension TerminalViewWithMosh: TerminalOutputHandler {
     func didReceiveOutput(_ data: Data) {
         let bytes = [UInt8](data)
         DispatchQueue.main.async {
-            self.terminalView.getTerminal().feed(byteArray: bytes)
+            // Use terminalView.feed() — not getTerminal().feed() — so SwiftTerm
+            // processes the data AND triggers an immediate UI redraw.
+            self.terminalView.feed(byteArray: bytes[...])
         }
     }
 
@@ -162,7 +147,19 @@ extension TerminalViewWithMosh: TerminalViewDelegate {
     }
 
     func sizeChanged(source: SwiftTerm.TerminalView, newCols: Int, newRows: Int) {
-        moshSession.resize(cols: newCols, rows: newRows)
+        if !hasConnected {
+            hasConnected = true
+            Task {
+                try? await moshSession.connect(
+                    info: connectInfo,
+                    sshPrivateKey: sshKey,
+                    cols: newCols,
+                    rows: newRows
+                )
+            }
+        } else {
+            moshSession.resize(cols: newCols, rows: newRows)
+        }
     }
 
     func setTerminalTitle(source: SwiftTerm.TerminalView, title: String) {}
