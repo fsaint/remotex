@@ -7,6 +7,15 @@ import (
 	"github.com/fsaint/remotex/internal/config"
 )
 
+func TestLoadMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	// No config written — Load should return an error
+	if _, err := config.Load(); err == nil {
+		t.Error("Load should return an error when config file does not exist")
+	}
+}
+
 func TestSaveAndLoad(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)

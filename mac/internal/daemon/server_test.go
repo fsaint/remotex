@@ -143,3 +143,85 @@ func TestHandleUnregisterNotFound(t *testing.T) {
 		t.Errorf("status: got %d want 404", w.Code)
 	}
 }
+
+func TestHandleRegisterSessionEmptyName(t *testing.T) {
+	srv, _ := newTestServer(t)
+
+	body := map[string]interface{}{"name": "  ", "tmux_pid": 1}
+	data, _ := json.Marshal(body)
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/sessions", bytes.NewReader(data))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status: got %d want 400", w.Code)
+	}
+}
+
+func TestHandleHealth(t *testing.T) {
+	srv, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("status: got %d want 200", w.Code)
+	}
+}
+
+func TestHandleConnectNotFound(t *testing.T) {
+	srv, _ := newTestServer(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/sessions/nosuchsession/connect", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("name", "nosuchsession")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("status: got %d want 404", w.Code)
+	}
+}
+
+func TestHandleConnectDeadSession(t *testing.T) {
+	srv, mgr := newTestServer(t)
+	mgr.Add(&session.Session{
+		Name:      "dead",
+		TmuxPID:   1,
+		StartedAt: time.Now(),
+		Status:    session.StatusDead,
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/sessions/dead/connect", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("name", "dead")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusGone {
+		t.Errorf("status: got %d want 410", w.Code)
+	}
+}
+
+func TestHandleConnectUnauthorized(t *testing.T) {
+	srv, mgr := newTestServer(t)
+	mgr.Add(&session.Session{Name: "work", TmuxPID: 1, Status: session.StatusLive})
+
+	req := httptest.NewRequest(http.MethodPost, "/sessions/work/connect", nil)
+	// no Authorization header
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("status: got %d want 401", w.Code)
+	}
+}

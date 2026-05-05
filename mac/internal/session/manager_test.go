@@ -59,6 +59,30 @@ func TestManagerPersistence(t *testing.T) {
 	}
 }
 
+func TestManagerListEmpty(t *testing.T) {
+	dir := t.TempDir()
+	m := session.NewManager(filepath.Join(dir, "sessions.json"))
+	all := m.List()
+	if all == nil {
+		t.Error("List should return empty slice, not nil")
+	}
+	if len(all) != 0 {
+		t.Errorf("List: got %d sessions want 0", len(all))
+	}
+}
+
+func TestManagerLoadMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	m := session.NewManager(filepath.Join(dir, "nosuchfile.json"))
+	// Load of a missing file should not error (treated as empty state)
+	if err := m.Load(); err != nil {
+		t.Errorf("Load of missing file should not error, got: %v", err)
+	}
+	if len(m.List()) != 0 {
+		t.Error("expected empty session list after loading missing file")
+	}
+}
+
 func TestManagerUpdate(t *testing.T) {
 	dir := t.TempDir()
 	m := session.NewManager(filepath.Join(dir, "sessions.json"))
