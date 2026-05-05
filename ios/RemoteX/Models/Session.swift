@@ -25,4 +25,15 @@ struct Session: Codable, Identifiable, Hashable {
         case startedAt  = "started_at"
         case status
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name      = try c.decode(String.self, forKey: .name)
+        tmuxPID   = try c.decode(Int.self,    forKey: .tmuxPID)
+        moshPID   = try c.decodeIfPresent(Int.self,    forKey: .moshPID)  ?? 0
+        moshPort  = try c.decodeIfPresent(Int.self,    forKey: .moshPort) ?? 0
+        moshKey   = try c.decodeIfPresent(String.self, forKey: .moshKey)  ?? ""
+        startedAt = try c.decode(Date.self,   forKey: .startedAt)
+        status    = try c.decode(Status.self, forKey: .status)
+    }
 }
