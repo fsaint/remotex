@@ -107,6 +107,13 @@ final class TerminalViewWithMosh: UIView {
         terminalView.terminalDelegate = self
         moshSession.outputHandler = self
         moshSession.observeAppLifecycle()
+
+        // Disable all iOS text processing — terminals handle input raw
+        terminalView.autocorrectionType = .no
+        terminalView.autocapitalizationType = .none
+        terminalView.spellCheckingType = .no
+        terminalView.smartQuotesType = .no
+        terminalView.smartDashesType = .no
     }
 
     required init?(coder: NSCoder) { fatalError() }
