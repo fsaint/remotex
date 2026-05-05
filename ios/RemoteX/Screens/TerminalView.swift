@@ -135,6 +135,75 @@ final class TerminalViewWithMosh: UIView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    // MARK: - Keyboard toolbar
+
+    private var ctrlPending = false
+    private weak var ctrlButton: UIButton?
+
+    private lazy var keyboardToolbar: UIView = {
+        struct Key { let label: String; let sel: Selector }
+        let keys: [Key] = [
+            Key(label: "ESC",  sel: #selector(sendEsc)),
+            Key(label: "TAB",  sel: #selector(sendTab)),
+            Key(label: "CTRL", sel: #selector(toggleCtrl)),
+            Key(label: "←",    sel: #selector(sendLeft)),
+            Key(label: "↑",    sel: #selector(sendUp)),
+            Key(label: "↓",    sel: #selector(sendDown)),
+            Key(label: "→",    sel: #selector(sendRight)),
+        ]
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 1
+        for key in keys {
+            let btn = UIButton(type: .system)
+            btn.setTitle(key.label, for: .normal)
+            btn.titleLabel?.font = .monospacedSystemFont(ofSize: 13, weight: .medium)
+            btn.setTitleColor(.white, for: .normal)
+            btn.backgroundColor = UIColor(white: 0.22, alpha: 1)
+            btn.layer.cornerRadius = 5
+            btn.addTarget(self, action: key.sel, for: .touchUpInside)
+            if key.label == "CTRL" { ctrlButton = btn }
+            stack.addArrangedSubview(btn)
+        }
+        let bar = UIView()
+        bar.backgroundColor = UIColor(white: 0.12, alpha: 1)
+        bar.addSubview(stack)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: bar.topAnchor, constant: 5),
+            stack.bottomAnchor.constraint(equalTo: bar.bottomAnchor, constant: -5),
+            stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 8),
+            stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -8),
+            bar.heightAnchor.constraint(equalToConstant: 44),
+        ])
+        return bar
+    }()
+
+    override var inputAccessoryView: UIView? { keyboardToolbar }
+
+    // Hardware keyboard arrow key support
+    override var keyCommands: [UIKeyCommand]? {[
+        UIKeyCommand(input: UIKeyCommand.inputUpArrow,    modifierFlags: [], action: #selector(sendUp)),
+        UIKeyCommand(input: UIKeyCommand.inputDownArrow,  modifierFlags: [], action: #selector(sendDown)),
+        UIKeyCommand(input: UIKeyCommand.inputLeftArrow,  modifierFlags: [], action: #selector(sendLeft)),
+        UIKeyCommand(input: UIKeyCommand.inputRightArrow, modifierFlags: [], action: #selector(sendRight)),
+    ]}
+
+    @objc private func sendEsc()   { moshSession.send(Data([0x1b])) }
+    @objc private func sendTab()   { moshSession.send(Data([0x09])) }
+    @objc private func sendLeft()  { moshSession.send(Data([0x1b, 0x5b, 0x44])) }
+    @objc private func sendUp()    { moshSession.send(Data([0x1b, 0x5b, 0x41])) }
+    @objc private func sendDown()  { moshSession.send(Data([0x1b, 0x5b, 0x42])) }
+    @objc private func sendRight() { moshSession.send(Data([0x1b, 0x5b, 0x43])) }
+
+    @objc private func toggleCtrl() {
+        ctrlPending = !ctrlPending
+        ctrlButton?.backgroundColor = ctrlPending
+            ? UIColor.systemYellow.withAlphaComponent(0.7)
+            : UIColor(white: 0.22, alpha: 1)
+    }
+
     deinit {
         NotificationCenter.default.removeObserver(self)
         moshSession.disconnect()
@@ -178,6 +247,19 @@ extension TerminalViewWithMosh: UIKeyInput {
     var hasText: Bool { true }  // always true; prevents edge-case keyboard dismissal
 
     func insertText(_ text: String) {
+        // If Ctrl is active, convert the next character to a control code (e.g. C→^C 0x03).
+        if ctrlPending {
+            ctrlPending = false
+            ctrlButton?.backgroundColor = UIColor(white: 0.22, alpha: 1)
+            if let scalar = text.unicodeScalars.first {
+                let v = scalar.value
+                // Map @A-Z[\]^_ (64-95) and a-z (97-122) to control codes 0x00-0x1f
+                if (v >= 64 && v <= 95) || (v >= 97 && v <= 122) {
+                    moshSession.send(Data([UInt8(v & 0x1f)]))
+                }
+            }
+            return
+        }
         // iOS keyboard sends "\n" (LF 0x0a) for the Return key.
         // Terminals expect CR (0x0d). Map it, matching SwiftTerm's returnByteSequence.
         if text == "\n" {
