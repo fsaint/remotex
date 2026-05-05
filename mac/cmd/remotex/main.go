@@ -8,7 +8,9 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/skip2/go-qrcode"
@@ -133,7 +135,7 @@ func newNewCmd() *cobra.Command {
 				// If daemon is not running, still report the session was created
 				fmt.Fprintf(os.Stderr, "warn: could not register with daemon: %v\n", err)
 				fmt.Printf("Session %q created (tmux pid %d) — start daemon to enable remote access\n", name, pid)
-				return nil
+				return attachSession(name)
 			}
 			defer resp.Body.Close()
 
@@ -142,7 +144,7 @@ func newNewCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Session %q created (tmux pid %d)\n", name, pid)
-			return nil
+			return attachSession(name)
 		},
 	}
 }
@@ -192,6 +194,17 @@ func newListCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+// attachSession replaces the current process with `tmux attach-session -t name`
+// so the user lands directly inside the session.
+func attachSession(name string) error {
+	tmuxBin, err := exec.LookPath("tmux")
+	if err != nil {
+		fmt.Printf("Attach with: tmux attach -t %s\n", name)
+		return nil
+	}
+	return syscall.Exec(tmuxBin, []string{"tmux", "attach-session", "-t", name}, os.Environ())
 }
 
 func newKillCmd() *cobra.Command {
