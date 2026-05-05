@@ -90,6 +90,17 @@ final class TerminalViewWithMosh: UIView {
     private var hasConnected = false
     private var hasSentInitialResize = false
 
+    // UITextInputTraits — configure keyboard; self is first responder, not terminalView
+    var autocorrectionType: UITextAutocorrectionType = .no
+    var autocapitalizationType: UITextAutocapitalizationType = .none
+    var spellCheckingType: UITextSpellCheckingType = .no
+    var smartQuotesType: UITextSmartQuotesType = .no
+    var smartDashesType: UITextSmartDashesType = .no
+    var keyboardType: UIKeyboardType = .asciiCapable
+    var returnKeyType: UIReturnKeyType = .default
+
+    override var canBecomeFirstResponder: Bool { true }
+
     init(connectInfo: ConnectInfo, sshKey: String) {
         self.connectInfo = connectInfo
         self.sshKey = sshKey
@@ -108,13 +119,6 @@ final class TerminalViewWithMosh: UIView {
         terminalView.terminalDelegate = self
         moshSession.outputHandler = self
         moshSession.observeAppLifecycle()
-
-        // Disable all iOS text processing — terminals handle input raw
-        terminalView.autocorrectionType = .no
-        terminalView.autocapitalizationType = .none
-        terminalView.spellCheckingType = .no
-        terminalView.smartQuotesType = .no
-        terminalView.smartDashesType = .no
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -123,12 +127,27 @@ final class TerminalViewWithMosh: UIView {
         moshSession.disconnect()
     }
 
-    // Open keyboard automatically when the view enters the window
+    // self (not terminalView) is the first responder so UIKeyInput handles input,
+    // bypassing UITextInput's buffer management which corrupts backspace.
     override func didMoveToWindow() {
         super.didMoveToWindow()
         if window != nil {
-            terminalView.becomeFirstResponder()
+            becomeFirstResponder()
         }
+    }
+}
+
+// MARK: - UIKeyInput
+
+extension TerminalViewWithMosh: UIKeyInput {
+    var hasText: Bool { true }  // always true; prevents edge-case keyboard dismissal
+
+    func insertText(_ text: String) {
+        moshSession.send(Data(text.utf8))
+    }
+
+    func deleteBackward() {
+        moshSession.send(Data([0x7f]))  // DEL — standard backspace for modern terminals
     }
 }
 
