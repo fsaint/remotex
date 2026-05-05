@@ -77,9 +77,28 @@ func GenerateAPIKey() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
+// tailscaleBin returns the path to the tailscale CLI, checking common macOS
+// install locations in addition to $PATH.
+func tailscaleBin() string {
+	if p, err := exec.LookPath("tailscale"); err == nil {
+		return p
+	}
+	candidates := []string{
+		"/Applications/Tailscale.app/Contents/MacOS/Tailscale",
+		"/usr/local/bin/tailscale",
+		"/opt/homebrew/bin/tailscale",
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	return "tailscale"
+}
+
 // TailscaleHost returns the current machine's Tailscale hostname.
 func TailscaleHost() (string, error) {
-	out, err := exec.Command("tailscale", "status", "--json").Output()
+	out, err := exec.Command(tailscaleBin(), "status", "--json").Output()
 	if err != nil {
 		return "", fmt.Errorf("tailscale status: %w", err)
 	}
