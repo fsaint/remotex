@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftTerm
+import MetalKit
 
 struct TerminalView: View {
     let client: DaemonClient
@@ -194,7 +195,7 @@ extension TerminalViewWithMosh: TerminalViewDelegate {
     func hostCurrentDirectoryUpdate(source: SwiftTerm.TerminalView, directory: String?) {}
 
     func scrolled(source: SwiftTerm.TerminalView, position: Double) {
-        source.setNeedsDisplay()
+        metalRedraw(source)
     }
 
     func requestOpenLink(source: SwiftTerm.TerminalView, link: String, params: [String: String]) {}
@@ -206,6 +207,14 @@ extension TerminalViewWithMosh: TerminalViewDelegate {
     func iTermContent(source: SwiftTerm.TerminalView, content: ArraySlice<UInt8>) {}
 
     func rangeChanged(source: SwiftTerm.TerminalView, startY: Int, endY: Int) {
-        source.setNeedsDisplay()
+        metalRedraw(source)
+    }
+
+    // SwiftTerm's scrolled() moves contentOffset but never queues a Metal redraw,
+    // so the old texture is shown at the new scroll position (phantom text).
+    // We reach into the view hierarchy to trigger the MTKView directly.
+    private func metalRedraw(_ view: SwiftTerm.TerminalView) {
+        guard let mtkView = view.subviews.first(where: { $0 is MTKView }) as? MTKView else { return }
+        mtkView.setNeedsDisplay(mtkView.bounds)
     }
 }
