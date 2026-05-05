@@ -89,7 +89,10 @@ func newSetupCmd() *cobra.Command {
 			fmt.Print("\nScan this QR code with the RemoteX iOS app:\n\n")
 			fmt.Println(qr.ToSmallString(false))
 
-			fmt.Println("Setup complete!")
+			fmt.Println("Or paste this JSON into the app (for simulator / no-camera pairing):")
+			fmt.Println(string(qrData))
+
+			fmt.Println("\nSetup complete!")
 			fmt.Println("Start the daemon with: remotex-daemon")
 			return nil
 		},

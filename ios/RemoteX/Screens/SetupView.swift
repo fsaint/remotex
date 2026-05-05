@@ -5,6 +5,8 @@ struct SetupView: View {
     let router: AppRouter
     @State private var error: String?
     @State private var isScanning = true
+    @State private var showPasteSheet = false
+    @State private var pasteText = ""
 
     var body: some View {
         VStack(spacing: 24) {
@@ -30,8 +32,21 @@ struct SetupView: View {
                     .foregroundStyle(.red)
                     .font(.footnote)
             }
+
+            Button("Paste pairing JSON instead") {
+                pasteText = UIPasteboard.general.string ?? ""
+                showPasteSheet = true
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
         }
         .padding()
+        .sheet(isPresented: $showPasteSheet) {
+            PasteSetupSheet(text: $pasteText) { json in
+                showPasteSheet = false
+                handleQR(json)
+            }
+        }
     }
 
     private func handleQR(_ string: String) {
@@ -45,6 +60,39 @@ struct SetupView: View {
             return
         }
         router.completePairing(with: creds)
+    }
+}
+
+struct PasteSetupSheet: View {
+    @Binding var text: String
+    let onConfirm: (String) -> Void
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Paste the JSON shown by `remotex setup` on your Mac.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                TextEditor(text: $text)
+                    .font(.system(.footnote, design: .monospaced))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(8)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .padding()
+            .navigationTitle("Paste Pairing JSON")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Pair") { onConfirm(text) }
+                        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onConfirm("") }
+                }
+            }
+        }
     }
 }
 
