@@ -8,12 +8,15 @@ struct TerminalView: View {
     @State private var connectInfo: ConnectInfo?
     @State private var connectError: String?
     @State private var isConnecting = true
+    @State private var showControls = false
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+
             if isConnecting {
                 VStack(spacing: 16) {
-                    ProgressView()
+                    ProgressView().tint(.white)
                     Text("Connecting to \(session.name)...")
                         .foregroundStyle(.secondary)
                 }
@@ -23,6 +26,7 @@ struct TerminalView: View {
                         .font(.largeTitle).foregroundStyle(.red)
                     Text(connectError)
                         .multilineTextAlignment(.center)
+                        .foregroundStyle(.white)
                     Button("Dismiss") { dismiss() }
                         .buttonStyle(.bordered)
                 }
@@ -31,13 +35,33 @@ struct TerminalView: View {
                 MoshTerminalView(connectInfo: info)
                     .ignoresSafeArea()
             }
-        }
-        .navigationBarHidden(true)
-        .gesture(DragGesture(minimumDistance: 50, coordinateSpace: .local)
-            .onEnded { value in
-                if value.translation.height > 100 { dismiss() }
+
+            // Floating controls — tap anywhere on terminal to toggle
+            if showControls || connectError != nil {
+                Button {
+                    dismiss()
+                } label: {
+                    Label("Exit session", systemImage: "xmark.circle.fill")
+                        .font(.callout.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(.black.opacity(0.6))
+                        .clipShape(Capsule())
+                }
+                .padding(.top, 56)
+                .padding(.trailing, 16)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
-        )
+        }
+        .ignoresSafeArea()
+        .persistentSystemOverlays(.hidden)
+        .navigationBarHidden(true)
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showControls.toggle()
+            }
+        }
         .task { await connect() }
     }
 
@@ -97,6 +121,10 @@ final class TerminalViewWithMosh: UIView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    deinit {
+        moshSession.disconnect()
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()
