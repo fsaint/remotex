@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionsView: View {
     let client: DaemonClient
+    let router: AppRouter
     @State private var sessions: [Session] = []
     @State private var isLoading = false
     @State private var error: String?
@@ -22,6 +23,9 @@ struct SessionsView: View {
                             .foregroundStyle(.secondary)
                         Button("Retry") { Task { await loadSessions() } }
                             .buttonStyle(.bordered)
+                        Button("Re-pair with Mac") { router.unpair() }
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
                     }
                     .padding()
                 } else {

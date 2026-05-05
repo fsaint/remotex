@@ -9,7 +9,7 @@ struct RemoteXApp: App {
         WindowGroup {
             if router.isPaired {
                 if let creds = router.credentials() {
-                    SessionsView(client: DaemonClient(credentials: creds))
+                    SessionsView(client: DaemonClient(credentials: creds), router: router)
                         .environment(\.keychain, keychain)
                 }
             } else {

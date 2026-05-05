@@ -18,6 +18,11 @@ final class AppRouter: ObservableObject {
     func credentials() -> Credentials? {
         try? keychain.load()
     }
+
+    func unpair() {
+        keychain.deleteCredentials()
+        isPaired = false
+    }
 }
 
 private struct KeychainKey: EnvironmentKey {
