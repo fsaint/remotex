@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -98,13 +99,39 @@ func newSetupCmd() *cobra.Command {
 		},
 	}
 }
+// inferSessionName returns a session name by checking (in order):
+// 1. The GitHub repo name of the current directory
+// 2. The current directory's base name
+func inferSessionName() string {
+	out, err := exec.Command("git", "remote", "get-url", "origin").Output()
+	if err == nil {
+		url := strings.TrimSpace(string(out))
+		// strip .git suffix, then take the last path component
+		url = strings.TrimSuffix(url, ".git")
+		if idx := strings.LastIndexAny(url, "/:"); idx >= 0 {
+			return url[idx+1:]
+		}
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "session"
+	}
+	return filepath.Base(cwd)
+}
+
 func newNewCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "new <name>",
+		Use:   "new [name]",
 		Short: "Create a new tmux session with a mosh-server",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
+			var name string
+			if len(args) == 1 {
+				name = args[0]
+			} else {
+				name = inferSessionName()
+				fmt.Printf("Using session name: %q\n", name)
+			}
 
 			if tmuxpkg.SessionExists(name) {
 				return fmt.Errorf("session %q already exists", name)
