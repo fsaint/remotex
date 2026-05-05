@@ -143,7 +143,13 @@ extension TerminalViewWithMosh: UIKeyInput {
     var hasText: Bool { true }  // always true; prevents edge-case keyboard dismissal
 
     func insertText(_ text: String) {
-        moshSession.send(Data(text.utf8))
+        // iOS keyboard sends "\n" (LF 0x0a) for the Return key.
+        // Terminals expect CR (0x0d). Map it, matching SwiftTerm's returnByteSequence.
+        if text == "\n" {
+            moshSession.send(Data([0x0d]))
+        } else {
+            moshSession.send(Data(text.utf8))
+        }
     }
 
     func deleteBackward() {
@@ -160,7 +166,6 @@ extension TerminalViewWithMosh: TerminalOutputHandler {
             // Use terminalView.feed() — not getTerminal().feed() — so SwiftTerm
             // processes the data AND triggers an immediate UI redraw.
             self.terminalView.feed(byteArray: bytes[...])
-
         }
     }
 
