@@ -98,7 +98,7 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 	if sess.MoshPID > 0 && sess.MoshPort > 0 && syscall.Kill(sess.MoshPID, 0) == nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(connectResponse{
-			Host: s.tailscaleHost,
+			Host: s.host,
 			Port: sess.MoshPort,
 			Key:  sess.MoshKey,
 		})
@@ -130,7 +130,7 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(connectResponse{
-		Host: s.tailscaleHost,
+		Host: s.host,
 		Port: info.Port,
 		Key:  info.Key,
 	})
