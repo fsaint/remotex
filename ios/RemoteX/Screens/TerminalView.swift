@@ -88,6 +88,7 @@ final class TerminalViewWithMosh: UIView {
     private let connectInfo: ConnectInfo
     private let sshKey: String
     private var hasConnected = false
+    private var hasSentInitialResize = false
 
     init(connectInfo: ConnectInfo, sshKey: String) {
         self.connectInfo = connectInfo
@@ -140,6 +141,13 @@ extension TerminalViewWithMosh: TerminalOutputHandler {
             // Use terminalView.feed() — not getTerminal().feed() — so SwiftTerm
             // processes the data AND triggers an immediate UI redraw.
             self.terminalView.feed(byteArray: bytes[...])
+
+            // On first output, send a resize to force tmux to re-sync cursor position
+            if !self.hasSentInitialResize {
+                self.hasSentInitialResize = true
+                let t = self.terminalView.getTerminal()
+                self.moshSession.resize(cols: t.cols, rows: t.rows)
+            }
         }
     }
 
@@ -173,7 +181,9 @@ extension TerminalViewWithMosh: TerminalViewDelegate {
 
     func hostCurrentDirectoryUpdate(source: SwiftTerm.TerminalView, directory: String?) {}
 
-    func scrolled(source: SwiftTerm.TerminalView, position: Double) {}
+    func scrolled(source: SwiftTerm.TerminalView, position: Double) {
+        source.setNeedsDisplay()
+    }
 
     func requestOpenLink(source: SwiftTerm.TerminalView, link: String, params: [String: String]) {}
 
@@ -183,5 +193,7 @@ extension TerminalViewWithMosh: TerminalViewDelegate {
 
     func iTermContent(source: SwiftTerm.TerminalView, content: ArraySlice<UInt8>) {}
 
-    func rangeChanged(source: SwiftTerm.TerminalView, startY: Int, endY: Int) {}
+    func rangeChanged(source: SwiftTerm.TerminalView, startY: Int, endY: Int) {
+        source.setNeedsDisplay()
+    }
 }
