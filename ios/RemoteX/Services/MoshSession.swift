@@ -99,7 +99,7 @@ final class MoshSession {
                 fIn, fOut, wsPtr,
                 nil, nil,       // state_callback, context (no resume in v1)
                 ip, port, key,
-                "adaptive",     // prediction mode
+                "never",        // prediction off — tmux confuses mosh's cursor tracking
                 nil, 0,         // encoded_state_buffer (no resume)
                 "0"             // predict_overwrite
             )

@@ -88,7 +88,6 @@ final class TerminalViewWithMosh: UIView {
     private let connectInfo: ConnectInfo
     private let sshKey: String
     private var hasConnected = false
-    private var hasSentInitialResize = false
 
     // UITextInputTraits — configure keyboard; self is first responder, not terminalView
     var autocorrectionType: UITextAutocorrectionType = .no
@@ -161,12 +160,6 @@ extension TerminalViewWithMosh: TerminalOutputHandler {
             // processes the data AND triggers an immediate UI redraw.
             self.terminalView.feed(byteArray: bytes[...])
 
-            // On first output, send a resize to force tmux to re-sync cursor position
-            if !self.hasSentInitialResize {
-                self.hasSentInitialResize = true
-                let t = self.terminalView.getTerminal()
-                self.moshSession.resize(cols: t.cols, rows: t.rows)
-            }
         }
     }
 
