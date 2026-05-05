@@ -33,7 +33,7 @@ struct TerminalView: View {
                 .padding()
             } else if let info = connectInfo {
                 MoshTerminalView(connectInfo: info)
-                    .ignoresSafeArea()
+                    .ignoresSafeArea(edges: [.top, .leading, .trailing])
             }
 
             // Floating controls — tap anywhere on terminal to toggle
@@ -91,8 +91,13 @@ struct MoshTerminalView: UIViewRepresentable {
 final class TerminalViewWithMosh: UIView {
     private let terminalView: SwiftTerm.TerminalView
     private let moshSession = MoshSession()
+    private let connectInfo: ConnectInfo
+    private let sshKey: String
+    private var hasConnected = false
 
     init(connectInfo: ConnectInfo, sshKey: String) {
+        self.connectInfo = connectInfo
+        self.sshKey = sshKey
         terminalView = SwiftTerm.TerminalView(frame: .zero)
         super.init(frame: .zero)
 
@@ -108,16 +113,6 @@ final class TerminalViewWithMosh: UIView {
         terminalView.terminalDelegate = self
         moshSession.outputHandler = self
         moshSession.observeAppLifecycle()
-
-        let size = TerminalSizeHelper.size(for: UIScreen.main.bounds)
-        Task {
-            try? await moshSession.connect(
-                info: connectInfo,
-                sshPrivateKey: sshKey,
-                cols: size.cols,
-                rows: size.rows
-            )
-        }
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -128,8 +123,21 @@ final class TerminalViewWithMosh: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        guard bounds.width > 0, bounds.height > 0 else { return }
         let size = TerminalSizeHelper.size(for: bounds)
-        moshSession.resize(cols: size.cols, rows: size.rows)
+        if !hasConnected {
+            hasConnected = true
+            Task {
+                try? await moshSession.connect(
+                    info: connectInfo,
+                    sshPrivateKey: sshKey,
+                    cols: size.cols,
+                    rows: size.rows
+                )
+            }
+        } else {
+            moshSession.resize(cols: size.cols, rows: size.rows)
+        }
     }
 }
 
