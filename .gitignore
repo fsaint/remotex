@@ -1,2 +1,34 @@
+# Worktrees & build output
 .worktrees/
 mac/bin/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcscmblueprint
+.build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Go
+vendor/
+
+# Prebuilt binary frameworks (too large for git; obtain separately)
+ios/Frameworks/

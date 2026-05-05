@@ -89,6 +89,7 @@ final class TerminalViewWithMosh: UIView {
     private let connectInfo: ConnectInfo
     private let sshKey: String
     private var hasConnected = false
+    private var bottomConstraint: NSLayoutConstraint!
 
     // UITextInputTraits — configure keyboard; self is first responder, not terminalView
     var autocorrectionType: UITextAutocorrectionType = .no
@@ -105,13 +106,17 @@ final class TerminalViewWithMosh: UIView {
         self.connectInfo = connectInfo
         self.sshKey = sshKey
         terminalView = SwiftTerm.TerminalView(frame: .zero)
+        terminalView.caretColor = .systemGreen
+        terminalView.caretTextColor = .black
+        terminalView.nativeBackgroundColor = .black
         super.init(frame: .zero)
 
         addSubview(terminalView)
         terminalView.translatesAutoresizingMaskIntoConstraints = false
+        bottomConstraint = terminalView.bottomAnchor.constraint(equalTo: bottomAnchor)
         NSLayoutConstraint.activate([
             terminalView.topAnchor.constraint(equalTo: topAnchor),
-            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bottomConstraint,
             terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
             terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
@@ -119,11 +124,19 @@ final class TerminalViewWithMosh: UIView {
         terminalView.terminalDelegate = self
         moshSession.outputHandler = self
         moshSession.observeAppLifecycle()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillChangeFrame(_:)),
+            name: UIResponder.keyboardWillChangeFrameNotification,
+            object: nil
+        )
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
     deinit {
+        NotificationCenter.default.removeObserver(self)
         moshSession.disconnect()
     }
 
@@ -132,7 +145,29 @@ final class TerminalViewWithMosh: UIView {
     override func didMoveToWindow() {
         super.didMoveToWindow()
         if window != nil {
+            try? terminalView.setUseMetal(true)
+            terminalView.metalBufferingMode = .perFrameAggregated
             becomeFirstResponder()
+        }
+    }
+
+    @objc private func keyboardWillChangeFrame(_ notification: Notification) {
+        guard
+            let userInfo = notification.userInfo,
+            let endFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+            let window = self.window
+        else { return }
+
+        let localFrame = convert(endFrame, from: window)
+        let overlap = max(0, bounds.maxY - localFrame.minY)
+
+        let duration = (userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
+        let curveRaw = (userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt) ?? 0
+        let options = UIView.AnimationOptions(rawValue: curveRaw << 16)
+
+        bottomConstraint.constant = -overlap
+        UIView.animate(withDuration: duration, delay: 0, options: options) {
+            self.layoutIfNeeded()
         }
     }
 }
