@@ -34,15 +34,15 @@ func Start(command string) (*ServerInfo, error) {
 	// "[mosh-server detached, pid = N]" to stderr, then exits 0.
 	// Use CombinedOutput so we capture both streams.
 	out, err := cmd.CombinedOutput()
-	if err != nil {
-		// Non-zero exit is unexpected but not fatal; keep the output we got.
-		_ = err
-	}
+	execErr := err // preserve for error reporting
 
 	output := string(out)
 
 	connMatch := connectRe.FindStringSubmatch(output)
 	if connMatch == nil {
+		if execErr != nil {
+			return nil, fmt.Errorf("mosh-server: %w; output: %q", execErr, output)
+		}
 		return nil, fmt.Errorf("mosh-server did not print MOSH CONNECT; output: %q", output)
 	}
 	port, _ := strconv.Atoi(connMatch[1])

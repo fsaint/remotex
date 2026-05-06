@@ -20,7 +20,7 @@ final class DaemonClient {
     }
 
     private var baseURL: String {
-        "http://\(credentials.host):7654"
+        "http://\(credentials.host):\(credentials.port)"
     }
 
     private func authorizedRequest(path: String, method: String = "GET") -> URLRequest {

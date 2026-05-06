@@ -73,8 +73,9 @@ func newSetupCmd() *cobra.Command {
 			}
 
 			// Encode pairing payload as JSON for QR code
-			payload := map[string]string{
+			payload := map[string]interface{}{
 				"host":            host,
+				"port":            cfg.DaemonPort,
 				"api_key":         apiKey,
 				"ssh_private_key": string(privKeyBytes),
 			}

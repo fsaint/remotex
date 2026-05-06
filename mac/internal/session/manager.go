@@ -40,12 +40,12 @@ func (m *Manager) Remove(name string) {
 	delete(m.sessions, name)
 }
 
-func (m *Manager) List() []*Session {
+func (m *Manager) List() []Session {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	out := make([]*Session, 0, len(m.sessions))
+	out := make([]Session, 0, len(m.sessions))
 	for _, s := range m.sessions {
-		out = append(out, s)
+		out = append(out, *s)
 	}
 	return out
 }
