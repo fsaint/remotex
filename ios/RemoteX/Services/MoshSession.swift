@@ -17,8 +17,11 @@ final class MoshSession {
     weak var outputHandler: TerminalOutputHandler?
     private(set) var isConnected = false
 
+    // Serializes access to inputWriteFD and isConnected
+    private let sessionQueue = DispatchQueue(label: "com.remotex.moshsession")
+
     // Pipes
-    private var inputWriteFD: Int32 = -1    // Swift writes user input here
+    private var inputWriteFD: Int32 = -1
     private var outputReadHandle: FileHandle?
 
     // Resize: heap-allocated winsize so mosh_main holds a stable pointer
@@ -43,7 +46,8 @@ final class MoshSession {
 
     func connect(info: ConnectInfo, sshPrivateKey: String,
                  cols: Int, rows: Int) async throws {
-        guard !isConnected else { throw SessionError.alreadyConnected }
+        let alreadyConnected = sessionQueue.sync { isConnected }
+        guard !alreadyConnected else { throw SessionError.alreadyConnected }
 
         // Set initial terminal size
         winSizePtr.pointee.ws_col = UInt16(cols)
@@ -56,7 +60,6 @@ final class MoshSession {
         pipe(&inputFDs)
         let inputReadFD  = inputFDs[0]
         let inputWriteFD = inputFDs[1]
-        self.inputWriteFD = inputWriteFD
 
         // Output pipe: mosh → Swift
         var outputFDs: [Int32] = [0, 0]
@@ -66,18 +69,18 @@ final class MoshSession {
 
         let fIn  = fdopen(inputReadFD,  "r")
         let fOut = fdopen(outputWriteFD, "w")
-        // Disable output buffering so terminal data arrives promptly
         setvbuf(fOut, nil, Int32(_IONBF), 0)
 
-        // Capture params for thread closure
-        let ip   = info.host
-        let port = String(info.port)
-        let key  = info.key
+        let ip    = info.host
+        let port  = String(info.port)
+        let key   = info.key
         let wsPtr = winSizePtr
 
-        isConnected = true
+        sessionQueue.sync {
+            self.inputWriteFD = inputWriteFD
+            self.isConnected  = true
+        }
 
-        // Read output pipe and forward to terminal handler
         let readHandle = FileHandle(fileDescriptor: outputReadFD, closeOnDealloc: true)
         self.outputReadHandle = readHandle
         readHandle.readabilityHandler = { [weak self] handle in
@@ -86,7 +89,6 @@ final class MoshSession {
             self?.outputHandler?.didReceiveOutput(data)
         }
 
-        // Run mosh_main on a background thread, capture pthread_t for SIGWINCH
         let semaphore = DispatchSemaphore(value: 0)
         var tid: pthread_t?
 
@@ -97,50 +99,67 @@ final class MoshSession {
 
             mosh_main(
                 fIn, fOut, wsPtr,
-                nil, nil,       // state_callback, context (no resume in v1)
+                nil, nil,
                 ip, port, key,
-                "never",        // prediction off — tmux confuses mosh's cursor tracking
-                nil, 0,         // encoded_state_buffer (no resume)
-                "0"             // predict_overwrite
+                "never",
+                nil, 0,
+                "0"
             )
 
             fclose(fIn)
             fclose(fOut)
-            self?.isConnected = false
-            self?.moshPThread = nil
-            DispatchQueue.main.async {
-                self?.outputHandler?.didDisconnect(error: nil)
+
+            // Natural exit: clean up and fire didDisconnect only if not already disconnected
+            var shouldNotify = false
+            self?.sessionQueue.sync {
+                if self?.isConnected == true {
+                    self?.isConnected  = false
+                    self?.moshPThread  = nil
+                    shouldNotify = true
+                }
+            }
+            if shouldNotify {
+                DispatchQueue.main.async {
+                    self?.outputHandler?.didDisconnect(error: nil)
+                }
             }
         }
 
-        // Wait until thread is running so moshPThread is set before any resize calls
         semaphore.wait()
     }
 
     func send(_ data: Data) {
-        guard inputWriteFD >= 0 else { return }
-        data.withUnsafeBytes { ptr in
-            _ = write(inputWriteFD, ptr.baseAddress!, ptr.count)
+        sessionQueue.sync {
+            guard inputWriteFD >= 0 else { return }
+            data.withUnsafeBytes { ptr in
+                _ = write(inputWriteFD, ptr.baseAddress!, ptr.count)
+            }
         }
     }
 
     func resize(cols: Int, rows: Int) {
         winSizePtr.pointee.ws_col = UInt16(cols)
         winSizePtr.pointee.ws_row = UInt16(rows)
-        // Signal mosh to re-read winsize
         if let tid = moshPThread {
             pthread_kill(tid, SIGWINCH)
         }
     }
 
     func disconnect() {
-        if inputWriteFD >= 0 {
-            close(inputWriteFD)
-            inputWriteFD = -1
+        var shouldNotify = false
+        sessionQueue.sync {
+            guard isConnected else { return }
+            isConnected = false
+            shouldNotify = true
+            if inputWriteFD >= 0 {
+                close(inputWriteFD)
+                inputWriteFD = -1
+            }
         }
         outputReadHandle?.readabilityHandler = nil
-        isConnected = false
-        outputHandler?.didDisconnect(error: nil)
+        if shouldNotify {
+            outputHandler?.didDisconnect(error: nil)
+        }
     }
 
     func observeAppLifecycle() {
@@ -148,7 +167,6 @@ final class MoshSession {
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            // mosh server maintains state; UDP keepalives handle reconnection
             _ = self
         }
 
@@ -156,8 +174,7 @@ final class MoshSession {
             forName: UIApplication.willEnterForegroundNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
-            // Trigger resize to refresh terminal after resume
-            guard let self, let ws = self.outputReadHandle else { return }
+            guard let self, self.outputReadHandle != nil else { return }
             let size = TerminalSizeHelper.size(for: UIScreen.main.bounds)
             self.resize(cols: size.cols, rows: size.rows)
         }
