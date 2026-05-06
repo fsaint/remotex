@@ -92,6 +92,10 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
+	if sess.Status == session.StatusDead {
+		http.Error(w, "session is dead", http.StatusGone)
+		return
+	}
 
 	// Kill any existing mosh-server so we always get a fresh UDP binding.
 	// tmux provides session persistence; a fresh mosh-server avoids stale state.
