@@ -32,7 +32,7 @@ struct TerminalView: View {
                 .padding()
             } else if let info = connectInfo {
                 MoshTerminalView(connectInfo: info)
-                    .ignoresSafeArea(edges: [.top, .leading, .trailing])
+                    .ignoresSafeArea()  // all edges: keyboard must not resize the terminal
             }
 
             // Back button — always visible in top-left
@@ -89,7 +89,7 @@ final class TerminalViewWithMosh: UIView {
     private let connectInfo: ConnectInfo
     private let sshKey: String
     private var hasConnected = false
-    private var bottomConstraint: NSLayoutConstraint!
+    private var lastByteWasCR = false
 
     // UITextInputTraits — configure keyboard; self is first responder, not terminalView
     var autocorrectionType: UITextAutocorrectionType = .no
@@ -111,12 +111,14 @@ final class TerminalViewWithMosh: UIView {
         terminalView.nativeBackgroundColor = .black
         super.init(frame: .zero)
 
+        // clipsToBounds ensures the terminal doesn't bleed past self's edges
+        // when shifted up by keyboard transform.
+        clipsToBounds = true
         addSubview(terminalView)
         terminalView.translatesAutoresizingMaskIntoConstraints = false
-        bottomConstraint = terminalView.bottomAnchor.constraint(equalTo: bottomAnchor)
         NSLayoutConstraint.activate([
             terminalView.topAnchor.constraint(equalTo: topAnchor),
-            bottomConstraint,
+            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
             terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
             terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
@@ -234,9 +236,8 @@ final class TerminalViewWithMosh: UIView {
         let curveRaw = (userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt) ?? 0
         let options = UIView.AnimationOptions(rawValue: curveRaw << 16)
 
-        bottomConstraint.constant = -overlap
         UIView.animate(withDuration: duration, delay: 0, options: options) {
-            self.layoutIfNeeded()
+            self.terminalView.transform = CGAffineTransform(translationX: 0, y: -overlap)
         }
     }
 }
@@ -278,11 +279,22 @@ extension TerminalViewWithMosh: UIKeyInput {
 
 extension TerminalViewWithMosh: TerminalOutputHandler {
     func didReceiveOutput(_ data: Data) {
-        let bytes = [UInt8](data)
+        let raw = [UInt8](data)
+        var buf = [UInt8]()
+        buf.reserveCapacity(raw.count + raw.count / 10)
+        var prevWasCR = lastByteWasCR
+        for byte in raw {
+            if byte == 0x0A && !prevWasCR {
+                buf.append(0x0D)
+            }
+            prevWasCR = (byte == 0x0D)
+            buf.append(byte)
+        }
+        lastByteWasCR = prevWasCR
         DispatchQueue.main.async {
             // Use terminalView.feed() — not getTerminal().feed() — so SwiftTerm
             // processes the data AND triggers an immediate UI redraw.
-            self.terminalView.feed(byteArray: bytes[...])
+            self.terminalView.feed(byteArray: buf[...])
         }
     }
 
