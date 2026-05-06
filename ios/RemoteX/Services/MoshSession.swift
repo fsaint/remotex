@@ -87,34 +87,32 @@ final class MoshSession {
         }
 
         // Run mosh_main on a background thread, capture pthread_t for SIGWINCH
-        let semaphore = DispatchSemaphore(value: 0)
         var tid: pthread_t?
 
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            tid = pthread_self()
-            self?.moshPThread = tid
-            semaphore.signal()
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                tid = pthread_self()
+                self?.moshPThread = tid
+                continuation.resume()
 
-            mosh_main(
-                fIn, fOut, wsPtr,
-                nil, nil,       // state_callback, context (no resume in v1)
-                ip, port, key,
-                "never",        // prediction off — tmux confuses mosh's cursor tracking
-                nil, 0,         // encoded_state_buffer (no resume)
-                "0"             // predict_overwrite
-            )
+                mosh_main(
+                    fIn, fOut, wsPtr,
+                    nil, nil,       // state_callback, context (no resume in v1)
+                    ip, port, key,
+                    "never",        // prediction off — tmux confuses mosh's cursor tracking
+                    nil, 0,         // encoded_state_buffer (no resume)
+                    "0"             // predict_overwrite
+                )
 
-            fclose(fIn)
-            fclose(fOut)
-            self?.isConnected = false
-            self?.moshPThread = nil
-            DispatchQueue.main.async {
-                self?.outputHandler?.didDisconnect(error: nil)
+                fclose(fIn)
+                fclose(fOut)
+                self?.isConnected = false
+                self?.moshPThread = nil
+                DispatchQueue.main.async {
+                    self?.outputHandler?.didDisconnect(error: nil)
+                }
             }
         }
-
-        // Wait until thread is running so moshPThread is set before any resize calls
-        semaphore.wait()
     }
 
     func send(_ data: Data) {
