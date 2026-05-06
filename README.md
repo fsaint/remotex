@@ -2,6 +2,10 @@
 
 Access your Mac terminal sessions from iPhone over Tailscale.
 
+## Screenshot
+
+![RemoteX running Claude Code on iPhone](claude_code.png)
+
 ## What it does
 
 RemoteX lets you connect to persistent tmux sessions running on your Mac directly from your iPhone. It uses mosh for reliable transport, SSH for authentication, and Tailscale for networking — no port forwarding or public IPs required.
