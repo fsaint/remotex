@@ -19,6 +19,7 @@ type Server struct {
 	tailscaleHost string
 	port          int
 	httpSrv       *http.Server
+	localSrv      *http.Server
 	connectMu     sync.Mutex
 }
 
@@ -69,8 +70,8 @@ func (s *Server) Start() error {
 	if localAddr != addr {
 		localLn, err := net.Listen("tcp", localAddr)
 		if err == nil {
-			localSrv := &http.Server{Addr: localAddr, Handler: router}
-			go localSrv.Serve(localLn)
+			s.localSrv = &http.Server{Addr: localAddr, Handler: router}
+			go s.localSrv.Serve(localLn)
 		}
 	}
 
@@ -80,6 +81,9 @@ func (s *Server) Start() error {
 func (s *Server) Stop() {
 	if s.httpSrv != nil {
 		s.httpSrv.Shutdown(context.Background())
+	}
+	if s.localSrv != nil {
+		s.localSrv.Shutdown(context.Background())
 	}
 }
 
