@@ -12,4 +12,12 @@ struct Credentials: Codable {
         case apiKey       = "api_key"
         case sshPrivateKey = "ssh_private_key"
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        host          = try c.decode(String.self, forKey: .host)
+        port          = try c.decodeIfPresent(Int.self, forKey: .port) ?? 7654
+        apiKey        = try c.decode(String.self, forKey: .apiKey)
+        sshPrivateKey = try c.decode(String.self, forKey: .sshPrivateKey)
+    }
 }

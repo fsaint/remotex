@@ -89,13 +89,13 @@ final class MoshSession {
             self?.outputHandler?.didReceiveOutput(data)
         }
 
-        let semaphore = DispatchSemaphore(value: 0)
         var tid: pthread_t?
 
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             tid = pthread_self()
             self?.moshPThread = tid
-            semaphore.signal()
+            continuation.resume()
 
             mosh_main(
                 fIn, fOut, wsPtr,
@@ -124,8 +124,7 @@ final class MoshSession {
                 }
             }
         }
-
-        semaphore.wait()
+        } // withCheckedContinuation
     }
 
     func send(_ data: Data) {
