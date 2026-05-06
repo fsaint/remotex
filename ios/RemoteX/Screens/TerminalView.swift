@@ -89,7 +89,7 @@ final class TerminalViewWithMosh: UIView {
     private let connectInfo: ConnectInfo
     private let sshKey: String
     private var hasConnected = false
-    private var lastByteWasCR = false
+    private var bottomConstraint: NSLayoutConstraint!
 
     // UITextInputTraits — configure keyboard; self is first responder, not terminalView
     var autocorrectionType: UITextAutocorrectionType = .no
@@ -116,9 +116,10 @@ final class TerminalViewWithMosh: UIView {
         clipsToBounds = true
         addSubview(terminalView)
         terminalView.translatesAutoresizingMaskIntoConstraints = false
+        bottomConstraint = terminalView.bottomAnchor.constraint(equalTo: bottomAnchor)
         NSLayoutConstraint.activate([
             terminalView.topAnchor.constraint(equalTo: topAnchor),
-            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bottomConstraint,
             terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
             terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
@@ -168,8 +169,12 @@ final class TerminalViewWithMosh: UIView {
             if key.label == "CTRL" { ctrlButton = btn }
             stack.addArrangedSubview(btn)
         }
-        let bar = UIView()
-        bar.backgroundColor = UIColor(white: 0.12, alpha: 1)
+        // Use a UIToolbar as the container so the system manages its height and
+        // avoids the _UIKBAutolayoutHeightConstraint conflict that a plain UIView gets.
+        let bar = UIToolbar()
+        bar.barStyle = .black
+        bar.isTranslucent = false
+        bar.barTintColor = UIColor(white: 0.12, alpha: 1)
         bar.addSubview(stack)
         stack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -177,14 +182,14 @@ final class TerminalViewWithMosh: UIView {
             stack.bottomAnchor.constraint(equalTo: bar.bottomAnchor, constant: -5),
             stack.leadingAnchor.constraint(equalTo: bar.leadingAnchor, constant: 8),
             stack.trailingAnchor.constraint(equalTo: bar.trailingAnchor, constant: -8),
-            bar.heightAnchor.constraint(equalToConstant: 44),
         ])
         return bar
     }()
 
     override var inputAccessoryView: UIView? { keyboardToolbar }
 
-    // Hardware keyboard arrow key support
+    // Hardware keyboard arrow key support (delegates to sendUp/Down/Left/Right which
+    // already select the correct CSI vs SS3 sequence based on DECCKM state)
     override var keyCommands: [UIKeyCommand]? {[
         UIKeyCommand(input: UIKeyCommand.inputUpArrow,    modifierFlags: [], action: #selector(sendUp)),
         UIKeyCommand(input: UIKeyCommand.inputDownArrow,  modifierFlags: [], action: #selector(sendDown)),
@@ -192,12 +197,16 @@ final class TerminalViewWithMosh: UIView {
         UIKeyCommand(input: UIKeyCommand.inputRightArrow, modifierFlags: [], action: #selector(sendRight)),
     ]}
 
+    // When DECCKM (application cursor key mode) is active the remote expects
+    // SS3 sequences (ESC O x) instead of CSI sequences (ESC [ x).
+    private var appCursorKeys: Bool { terminalView.getTerminal().applicationCursor }
+
     @objc private func sendEsc()   { moshSession.send(Data([0x1b])) }
     @objc private func sendTab()   { moshSession.send(Data([0x09])) }
-    @objc private func sendLeft()  { moshSession.send(Data([0x1b, 0x5b, 0x44])) }
-    @objc private func sendUp()    { moshSession.send(Data([0x1b, 0x5b, 0x41])) }
-    @objc private func sendDown()  { moshSession.send(Data([0x1b, 0x5b, 0x42])) }
-    @objc private func sendRight() { moshSession.send(Data([0x1b, 0x5b, 0x43])) }
+    @objc private func sendLeft()  { moshSession.send(appCursorKeys ? Data([0x1b, 0x4f, 0x44]) : Data([0x1b, 0x5b, 0x44])) }
+    @objc private func sendUp()    { moshSession.send(appCursorKeys ? Data([0x1b, 0x4f, 0x41]) : Data([0x1b, 0x5b, 0x41])) }
+    @objc private func sendDown()  { moshSession.send(appCursorKeys ? Data([0x1b, 0x4f, 0x42]) : Data([0x1b, 0x5b, 0x42])) }
+    @objc private func sendRight() { moshSession.send(appCursorKeys ? Data([0x1b, 0x4f, 0x43]) : Data([0x1b, 0x5b, 0x43])) }
 
     @objc private func toggleCtrl() {
         ctrlPending = !ctrlPending
@@ -231,13 +240,14 @@ final class TerminalViewWithMosh: UIView {
 
         let localFrame = convert(endFrame, from: window)
         let overlap = max(0, bounds.maxY - localFrame.minY)
-
         let duration = (userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
-        let curveRaw = (userInfo[UIResponder.keyboardAnimationCurveUserInfoKey] as? UInt) ?? 0
-        let options = UIView.AnimationOptions(rawValue: curveRaw << 16)
 
-        UIView.animate(withDuration: duration, delay: 0, options: options) {
-            self.terminalView.transform = CGAffineTransform(translationX: 0, y: -overlap)
+        // Shift terminalView up so content near the bottom stays visible above the keyboard.
+        // We do NOT resize the terminal — mosh keeps its original row/col count, which
+        // eliminates the size mismatch that caused TUI menus to garble.
+        let transform = overlap > 0 ? CGAffineTransform(translationX: 0, y: -overlap) : .identity
+        UIView.animate(withDuration: duration) {
+            self.terminalView.transform = transform
         }
     }
 }
@@ -254,9 +264,27 @@ extension TerminalViewWithMosh: UIKeyInput {
             ctrlButton?.backgroundColor = UIColor(white: 0.22, alpha: 1)
             if let scalar = text.unicodeScalars.first {
                 let v = scalar.value
-                // Map @A-Z[\]^_ (64-95) and a-z (97-122) to control codes 0x00-0x1f
-                if (v >= 64 && v <= 95) || (v >= 97 && v <= 122) {
+                switch v {
+                case 0x20:          // Ctrl-Space → NUL (0x00)
+                    moshSession.send(Data([0x00]))
+                case 0x32:          // Ctrl-2 → NUL (0x00)
+                    moshSession.send(Data([0x00]))
+                case 0x33:          // Ctrl-3 → ESC (0x1b)
+                    moshSession.send(Data([0x1b]))
+                case 0x34:          // Ctrl-4 → FS (0x1c)
+                    moshSession.send(Data([0x1c]))
+                case 0x35:          // Ctrl-5 → GS (0x1d)
+                    moshSession.send(Data([0x1d]))
+                case 0x36:          // Ctrl-6 → RS (0x1e)
+                    moshSession.send(Data([0x1e]))
+                case 0x37, 0x2f:    // Ctrl-7 or Ctrl-/ → US (0x1f)
+                    moshSession.send(Data([0x1f]))
+                case 0x38:          // Ctrl-8 → DEL (0x7f)
+                    moshSession.send(Data([0x7f]))
+                case 64...95, 97...122: // @A-Z[\]^_ and a-z → 0x00-0x1f
                     moshSession.send(Data([UInt8(v & 0x1f)]))
+                default:
+                    break
                 }
             }
             return
@@ -279,22 +307,8 @@ extension TerminalViewWithMosh: UIKeyInput {
 
 extension TerminalViewWithMosh: TerminalOutputHandler {
     func didReceiveOutput(_ data: Data) {
-        let raw = [UInt8](data)
-        var buf = [UInt8]()
-        buf.reserveCapacity(raw.count + raw.count / 10)
-        var prevWasCR = lastByteWasCR
-        for byte in raw {
-            if byte == 0x0A && !prevWasCR {
-                buf.append(0x0D)
-            }
-            prevWasCR = (byte == 0x0D)
-            buf.append(byte)
-        }
-        lastByteWasCR = prevWasCR
         DispatchQueue.main.async {
-            // Use terminalView.feed() — not getTerminal().feed() — so SwiftTerm
-            // processes the data AND triggers an immediate UI redraw.
-            self.terminalView.feed(byteArray: buf[...])
+            self.terminalView.feed(byteArray: [UInt8](data)[...])
         }
     }
 

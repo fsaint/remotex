@@ -24,11 +24,14 @@ func (m *Manager) Add(s *Session) {
 	m.sessions[s.Name] = s
 }
 
-func (m *Manager) Get(name string) (*Session, bool) {
+func (m *Manager) Get(name string) (Session, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	s, ok := m.sessions[name]
-	return s, ok
+	if !ok {
+		return Session{}, false
+	}
+	return *s, true
 }
 
 func (m *Manager) Remove(name string) {
