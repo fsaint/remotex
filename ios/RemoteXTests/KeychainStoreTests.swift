@@ -12,6 +12,7 @@ final class KeychainStoreTests: XCTestCase {
     func testSaveAndLoad() throws {
         let creds = Credentials(
             host: "myhost.ts.net",
+            port: 7654,
             apiKey: "test-api-key-123",
             sshPrivateKey: "-----BEGIN OPENSSH PRIVATE KEY-----\ntest\n-----END OPENSSH PRIVATE KEY-----"
         )
@@ -31,7 +32,7 @@ final class KeychainStoreTests: XCTestCase {
 
     func testIsPaired() throws {
         XCTAssertFalse(store.isPaired)
-        try store.save(Credentials(host: "h", apiKey: "k", sshPrivateKey: "p"))
+        try store.save(Credentials(host: "h", port: 7654, apiKey: "k", sshPrivateKey: "p"))
         XCTAssertTrue(store.isPaired)
     }
 }
