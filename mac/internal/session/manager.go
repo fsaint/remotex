@@ -94,7 +94,6 @@ func (m *Manager) PruneDeadPIDs() {
 			s.MoshPID = 0
 			s.MoshPort = 0
 			s.MoshKey = ""
-			m.sessions[name] = s
 		}
 	}
 }

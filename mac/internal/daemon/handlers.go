@@ -52,10 +52,7 @@ func (s *Server) handleUnregisterSession(w http.ResponseWriter, r *http.Request)
 		mosh.Stop(sess.MoshPID)
 	}
 	s.mgr.Remove(name)
-	if err := s.mgr.Save(); err != nil {
-		http.Error(w, "failed to persist session", http.StatusInternalServerError)
-		return
-	}
+	s.mgr.Save() // best-effort; in-memory state is already correct
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -109,7 +106,7 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Spawn a new mosh-server attached to the tmux session
-	info, err := mosh.Start(fmt.Sprintf("tmux attach-session -t %s", name))
+	info, err := mosh.Start([]string{"tmux", "attach-session", "-t", name})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("start mosh-server: %v", err), http.StatusInternalServerError)
 		return

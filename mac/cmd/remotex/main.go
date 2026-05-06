@@ -78,6 +78,7 @@ func newSetupCmd() *cobra.Command {
 				"port":            cfg.DaemonPort,
 				"api_key":         apiKey,
 				"ssh_private_key": string(privKeyBytes),
+				"port":            cfg.DaemonPort,
 			}
 			qrData, err := json.Marshal(payload)
 			if err != nil {
