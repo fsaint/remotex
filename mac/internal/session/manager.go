@@ -88,7 +88,7 @@ func (m *Manager) Load() error {
 func (m *Manager) PruneDeadPIDs() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	for name, s := range m.sessions {
+	for _, s := range m.sessions {
 		if !pidAlive(s.TmuxPID) {
 			s.Status = StatusDead
 			s.MoshPID = 0

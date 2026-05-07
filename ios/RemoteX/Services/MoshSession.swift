@@ -26,8 +26,15 @@ final class MoshSession {
 
     // Resize: heap-allocated winsize so mosh_main holds a stable pointer
     private var winSizePtr: UnsafeMutablePointer<winsize>
-    // Thread running mosh_main (needed for SIGWINCH)
-    private var moshPThread: pthread_t?
+    // Thread running mosh_main (needed for SIGWINCH); protected by threadLock
+    private let threadLock = NSLock()
+    private var _moshPThread: pthread_t?
+    private var moshPThread: pthread_t? {
+        get { threadLock.withLock { _moshPThread } }
+        set { threadLock.withLock { _moshPThread = newValue } }
+    }
+    // Resize requested before mosh thread started; applied once thread is ready
+    private var pendingResize: (cols: Int, rows: Int)?
 
     // App lifecycle observers
     private var backgroundObserver: NSObjectProtocol?
@@ -97,6 +104,11 @@ final class MoshSession {
                 tid = pthread_self()
                 self?.moshPThread = tid
                 continuation.resume()
+                // Apply any resize that arrived before the thread was ready
+                if let pending = self?.pendingResize {
+                    self?.pendingResize = nil
+                    self?.resize(cols: pending.cols, rows: pending.rows)
+                }
 
                 mosh_main(
                     fIn, fOut, wsPtr,
@@ -142,6 +154,8 @@ final class MoshSession {
         winSizePtr.pointee.ws_row = UInt16(rows)
         if let tid = moshPThread {
             pthread_kill(tid, SIGWINCH)
+        } else {
+            pendingResize = (cols, rows)
         }
     }
 

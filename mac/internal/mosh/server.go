@@ -5,7 +5,6 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -20,13 +19,13 @@ type ServerInfo struct {
 var connectRe = regexp.MustCompile(`MOSH CONNECT (\d+) ([A-Za-z0-9/+]{22,24})`)
 var pidRe = regexp.MustCompile(`\[mosh-server detached, pid = (\d+)\]`)
 
-// Start spawns mosh-server with the given command and returns its connection info.
-// command is the shell command mosh-server will exec (e.g. "tmux attach-session -t work").
-func Start(command string) (*ServerInfo, error) {
+// Start spawns mosh-server with the given command args and returns its connection info.
+// cmdArgs are the argv elements mosh-server will exec (e.g. []string{"tmux", "attach-session", "-t", "work"}).
+func Start(cmdArgs []string) (*ServerInfo, error) {
 	args := []string{"new", "-s"}
-	if command != "" {
+	if len(cmdArgs) > 0 {
 		args = append(args, "--")
-		args = append(args, strings.Fields(command)...)
+		args = append(args, cmdArgs...)
 	}
 	cmd := exec.Command("mosh-server", args...)
 
@@ -34,15 +33,14 @@ func Start(command string) (*ServerInfo, error) {
 	// "[mosh-server detached, pid = N]" to stderr, then exits 0.
 	// Use CombinedOutput so we capture both streams.
 	out, err := cmd.CombinedOutput()
-	execErr := err // preserve for error reporting
+	if err != nil {
+		return nil, fmt.Errorf("mosh-server: %w; output: %q", err, string(out))
+	}
 
 	output := string(out)
 
 	connMatch := connectRe.FindStringSubmatch(output)
 	if connMatch == nil {
-		if execErr != nil {
-			return nil, fmt.Errorf("mosh-server: %w; output: %q", execErr, output)
-		}
 		return nil, fmt.Errorf("mosh-server did not print MOSH CONNECT; output: %q", output)
 	}
 	port, _ := strconv.Atoi(connMatch[1])

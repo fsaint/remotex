@@ -240,15 +240,9 @@ final class TerminalViewWithMosh: UIView {
 
         let localFrame = convert(endFrame, from: window)
         let overlap = max(0, bounds.maxY - localFrame.minY)
-        let duration = (userInfo[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double) ?? 0.25
 
-        // Shift terminalView up so content near the bottom stays visible above the keyboard.
-        // We do NOT resize the terminal — mosh keeps its original row/col count, which
-        // eliminates the size mismatch that caused TUI menus to garble.
-        let transform = overlap > 0 ? CGAffineTransform(translationX: 0, y: -overlap) : .identity
-        UIView.animate(withDuration: duration) {
-            self.terminalView.transform = transform
-        }
+        bottomConstraint.constant = -overlap
+        layoutIfNeeded()
     }
 }
 
