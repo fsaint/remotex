@@ -9,6 +9,8 @@ struct TerminalView: View {
     @State private var connectInfo: ConnectInfo?
     @State private var connectError: String?
     @State private var isConnecting = true
+    @State private var disconnected = false
+
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black.ignoresSafeArea()
@@ -31,8 +33,23 @@ struct TerminalView: View {
                 }
                 .padding()
             } else if let info = connectInfo {
-                MoshTerminalView(connectInfo: info)
-                    .ignoresSafeArea()  // all edges: keyboard must not resize the terminal
+                MoshTerminalView(connectInfo: info, onDisconnect: {
+                    disconnected = true
+                })
+                .ignoresSafeArea()  // all edges: keyboard must not resize the terminal
+
+                if disconnected {
+                    VStack(spacing: 16) {
+                        Image(systemName: "bolt.slash")
+                            .font(.largeTitle).foregroundStyle(.orange)
+                        Text("Session disconnected")
+                            .foregroundStyle(.white)
+                        Button("Back") { dismiss() }
+                            .buttonStyle(.bordered)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.75))
+                }
             }
 
             // Back button — always visible in top-left
@@ -73,11 +90,14 @@ struct TerminalView: View {
 
 struct MoshTerminalView: UIViewRepresentable {
     let connectInfo: ConnectInfo
-    @Environment(\.keychain) private var keychain
+    let onDisconnect: () -> Void
 
     func makeUIView(context: Context) -> TerminalViewWithMosh {
-        let creds = try? keychain.load()
-        return TerminalViewWithMosh(connectInfo: connectInfo, sshKey: creds?.sshPrivateKey ?? "")
+        let view = TerminalViewWithMosh(connectInfo: connectInfo)
+        view.disconnectCallback = { [onDisconnect] in
+            DispatchQueue.main.async { onDisconnect() }
+        }
+        return view
     }
 
     func updateUIView(_ uiView: TerminalViewWithMosh, context: Context) {}
@@ -87,9 +107,10 @@ final class TerminalViewWithMosh: UIView {
     private let terminalView: SwiftTerm.TerminalView
     private let moshSession = MoshSession()
     private let connectInfo: ConnectInfo
-    private let sshKey: String
     private var hasConnected = false
     private var bottomConstraint: NSLayoutConstraint!
+
+    var disconnectCallback: (() -> Void)?
 
     // UITextInputTraits — configure keyboard; self is first responder, not terminalView
     var autocorrectionType: UITextAutocorrectionType = .no
@@ -102,9 +123,8 @@ final class TerminalViewWithMosh: UIView {
 
     override var canBecomeFirstResponder: Bool { true }
 
-    init(connectInfo: ConnectInfo, sshKey: String) {
+    init(connectInfo: ConnectInfo) {
         self.connectInfo = connectInfo
-        self.sshKey = sshKey
         terminalView = SwiftTerm.TerminalView(frame: .zero)
         terminalView.caretColor = .systemGreen
         terminalView.caretTextColor = .black
@@ -306,7 +326,9 @@ extension TerminalViewWithMosh: TerminalOutputHandler {
         }
     }
 
-    func didDisconnect(error: Error?) {}
+    func didDisconnect(error: Error?) {
+        disconnectCallback?()
+    }
 }
 
 // MARK: - TerminalViewDelegate
@@ -322,7 +344,6 @@ extension TerminalViewWithMosh: TerminalViewDelegate {
             Task {
                 try? await moshSession.connect(
                     info: connectInfo,
-                    sshPrivateKey: sshKey,
                     cols: newCols,
                     rows: newRows
                 )

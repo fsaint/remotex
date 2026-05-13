@@ -42,10 +42,12 @@ struct SetupView: View {
         }
         .padding()
         .sheet(isPresented: $showPasteSheet) {
-            PasteSetupSheet(text: $pasteText) { json in
+            PasteSetupSheet(text: $pasteText, onConfirm: { json in
                 showPasteSheet = false
                 handleQR(json)
-            }
+            }, onCancel: {
+                showPasteSheet = false
+            })
         }
     }
 
@@ -53,19 +55,28 @@ struct SetupView: View {
         isScanning = false
         guard
             let data = string.data(using: .utf8),
-            let creds = try? JSONDecoder().decode(Credentials.self, from: data)
+            let creds = try? JSONDecoder().decode(Credentials.self, from: data),
+            !creds.host.isEmpty,
+            creds.port > 0,
+            !creds.apiKey.isEmpty
         else {
             error = "Invalid QR code. Make sure you scanned the RemoteX pairing code."
             isScanning = true
             return
         }
-        router.completePairing(with: creds)
+        do {
+            try router.completePairing(with: creds)
+        } catch {
+            self.error = "Failed to save credentials: \(error.localizedDescription)"
+            isScanning = true
+        }
     }
 }
 
 struct PasteSetupSheet: View {
     @Binding var text: String
     let onConfirm: (String) -> Void
+    let onCancel: () -> Void
 
     var body: some View {
         NavigationStack {
@@ -89,7 +100,7 @@ struct PasteSetupSheet: View {
                         .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { onConfirm("") }
+                    Button("Cancel") { onCancel() }
                 }
             }
         }
@@ -107,12 +118,17 @@ struct QRScannerView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: QRPreviewView, context: Context) {}
+
+    static func dismantleUIView(_ uiView: QRPreviewView, coordinator: ()) {
+        uiView.stopScanning()
+    }
 }
 
 final class QRPreviewView: UIView, AVCaptureMetadataOutputObjectsDelegate {
     var onScan: ((String) -> Void)?
     private let captureSession = AVCaptureSession()
     private var previewLayer: AVCaptureVideoPreviewLayer!
+    private var didScan = false
 
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -120,6 +136,23 @@ final class QRPreviewView: UIView, AVCaptureMetadataOutputObjectsDelegate {
     }
 
     func startScanning() {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        guard status == .authorized || status == .notDetermined else {
+            // Camera permission denied — surface via onScan("")? No: signal via
+            // a dedicated path. For now show nothing; the parent checks for empty result.
+            return
+        }
+
+        if status == .notDetermined {
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                if granted { DispatchQueue.main.async { self?.setupSession() } }
+            }
+        } else {
+            setupSession()
+        }
+    }
+
+    private func setupSession() {
         guard let device = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: device),
               captureSession.canAddInput(input) else { return }
@@ -138,12 +171,20 @@ final class QRPreviewView: UIView, AVCaptureMetadataOutputObjectsDelegate {
         DispatchQueue.global(qos: .userInitiated).async { self.captureSession.startRunning() }
     }
 
+    func stopScanning() {
+        captureSession.stopRunning()
+    }
+
     func metadataOutput(_ output: AVCaptureMetadataOutput,
                         didOutput objects: [AVMetadataObject],
                         from connection: AVCaptureConnection) {
-        guard let obj = objects.first as? AVMetadataMachineReadableCodeObject,
+        guard !didScan,
+              let obj = objects.first as? AVMetadataMachineReadableCodeObject,
               let string = obj.stringValue else { return }
+        didScan = true
         captureSession.stopRunning()
-        onScan?(string)
+        let callback = onScan
+        onScan = nil
+        callback?(string)
     }
 }

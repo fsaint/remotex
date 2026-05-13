@@ -56,17 +56,10 @@ func newSetupCmd() *cobra.Command {
 			}
 			fmt.Printf("Tailscale hostname: %s\n", host)
 
-			privKeyPath := filepath.Join(config.Dir(), "id_ed25519")
-			privKeyBytes, err := os.ReadFile(privKeyPath)
-			if err != nil {
-				return fmt.Errorf("read private key: %w", err)
-			}
-
 			cfg := &config.Config{
 				APIKey:        apiKey,
 				TailscaleHost: host,
 				DaemonPort:    7654,
-				SSHKeyPath:    privKeyPath,
 			}
 			if err := config.Save(cfg); err != nil {
 				return fmt.Errorf("save config: %w", err)
@@ -74,10 +67,9 @@ func newSetupCmd() *cobra.Command {
 
 			// Encode pairing payload as JSON for QR code
 			payload := map[string]interface{}{
-				"host":            host,
-				"port":            cfg.DaemonPort,
-				"api_key":         apiKey,
-				"ssh_private_key": string(privKeyBytes),
+				"host":    host,
+				"port":    cfg.DaemonPort,
+				"api_key": apiKey,
 			}
 			qrData, err := json.Marshal(payload)
 			if err != nil {

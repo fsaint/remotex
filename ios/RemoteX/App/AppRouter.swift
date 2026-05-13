@@ -10,8 +10,8 @@ final class AppRouter: ObservableObject {
         self.isPaired = keychain.isPaired
     }
 
-    func completePairing(with credentials: Credentials) {
-        try? keychain.save(credentials)
+    func completePairing(with credentials: Credentials) throws {
+        try keychain.save(credentials)
         isPaired = true
     }
 

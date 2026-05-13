@@ -19,10 +19,14 @@ type ServerInfo struct {
 var connectRe = regexp.MustCompile(`MOSH CONNECT (\d+) ([A-Za-z0-9/+]{22,24})`)
 var pidRe = regexp.MustCompile(`\[mosh-server detached, pid = (\d+)\]`)
 
-// Start spawns mosh-server with the given command args and returns its connection info.
+// Start spawns mosh-server bound to bindIP with the given command args and returns its connection info.
+// bindIP should be the Tailscale interface address so mosh only accepts UDP on that interface.
 // cmdArgs are the argv elements mosh-server will exec (e.g. []string{"tmux", "attach-session", "-t", "work"}).
-func Start(cmdArgs []string) (*ServerInfo, error) {
+func Start(bindIP string, cmdArgs []string) (*ServerInfo, error) {
 	args := []string{"new", "-s"}
+	if bindIP != "" {
+		args = append(args, "-i", bindIP)
+	}
 	if len(cmdArgs) > 0 {
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
@@ -34,14 +38,15 @@ func Start(cmdArgs []string) (*ServerInfo, error) {
 	// Use CombinedOutput so we capture both streams.
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("mosh-server: %w; output: %q", err, string(out))
+		// Don't include raw output — it may contain the MOSH CONNECT key.
+		return nil, fmt.Errorf("mosh-server: %w", err)
 	}
 
 	output := string(out)
 
 	connMatch := connectRe.FindStringSubmatch(output)
 	if connMatch == nil {
-		return nil, fmt.Errorf("mosh-server did not print MOSH CONNECT; output: %q", output)
+		return nil, fmt.Errorf("mosh-server did not print MOSH CONNECT")
 	}
 	port, _ := strconv.Atoi(connMatch[1])
 	key := connMatch[2]

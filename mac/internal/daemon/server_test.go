@@ -53,7 +53,7 @@ func TestHandleRegisterSession(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	srv.ServeHTTP(w, req)
+	srv.ServeInternalHTTP(w, req)
 
 	if w.Code != http.StatusCreated {
 		t.Errorf("status: got %d want 201", w.Code)
@@ -67,7 +67,7 @@ func TestHandleRegisterSessionBadRequest(t *testing.T) {
 	srv, _ := newTestServer(t)
 	req := httptest.NewRequest(http.MethodPost, "/internal/sessions", bytes.NewReader([]byte("not json")))
 	w := httptest.NewRecorder()
-	srv.ServeHTTP(w, req)
+	srv.ServeInternalHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("status: got %d want 400", w.Code)
 	}
@@ -118,7 +118,7 @@ func TestHandleUnregisterSession(t *testing.T) {
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	w := httptest.NewRecorder()
 
-	srv.ServeHTTP(w, req)
+	srv.ServeInternalHTTP(w, req)
 
 	if w.Code != http.StatusNoContent {
 		t.Errorf("status: got %d want 204", w.Code)
@@ -154,7 +154,7 @@ func TestHandleRegisterSessionEmptyName(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	srv.ServeHTTP(w, req)
+	srv.ServeInternalHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("status: got %d want 400", w.Code)

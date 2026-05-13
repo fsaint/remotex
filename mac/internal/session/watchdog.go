@@ -1,6 +1,7 @@
 package session
 
 import (
+	"sync"
 	"time"
 )
 
@@ -9,6 +10,7 @@ type Watchdog struct {
 	mgr      *Manager
 	interval time.Duration
 	stop     chan struct{}
+	once     sync.Once
 }
 
 func NewWatchdog(mgr *Manager, interval time.Duration) *Watchdog {
@@ -29,7 +31,7 @@ func (w *Watchdog) Run() {
 }
 
 func (w *Watchdog) Stop() {
-	close(w.stop)
+	w.once.Do(func() { close(w.stop) })
 }
 
 func (w *Watchdog) check() {

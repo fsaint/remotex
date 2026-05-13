@@ -47,6 +47,7 @@ struct SessionsView: View {
             }
         }
         .task { await loadSessions() }
+        .onAppear { Task { await loadSessions() } }
     }
 
     private func loadSessions() async {

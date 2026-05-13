@@ -19,6 +19,7 @@ type registerRequest struct {
 }
 
 func (s *Server) handleRegisterSession(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	var req registerRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -105,8 +106,8 @@ func (s *Server) handleConnect(w http.ResponseWriter, r *http.Request) {
 		sess.MoshKey = ""
 	})
 
-	// Spawn a new mosh-server attached to the tmux session
-	info, err := mosh.Start([]string{"tmux", "attach-session", "-t", name})
+	// Spawn a new mosh-server attached to the tmux session, bound to the Tailscale interface.
+	info, err := mosh.Start(s.host, []string{"tmux", "attach-session", "-t", name})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("start mosh-server: %v", err), http.StatusInternalServerError)
 		return

@@ -17,7 +17,7 @@ final class MoshSession {
     weak var outputHandler: TerminalOutputHandler?
     private(set) var isConnected = false
 
-    // Serializes access to inputWriteFD and isConnected
+    // Serializes access to inputWriteFD, isConnected, pendingResize, and winSizePtr writes
     private let sessionQueue = DispatchQueue(label: "com.remotex.moshsession")
 
     // Pipes
@@ -33,11 +33,11 @@ final class MoshSession {
         get { threadLock.withLock { _moshPThread } }
         set { threadLock.withLock { _moshPThread = newValue } }
     }
-    // Resize requested before mosh thread started; applied once thread is ready
+    // Resize requested before mosh thread started; applied once thread is ready.
+    // Access only under sessionQueue.
     private var pendingResize: (cols: Int, rows: Int)?
 
-    // App lifecycle observers
-    private var backgroundObserver: NSObjectProtocol?
+    // App lifecycle observer
     private var foregroundObserver: NSObjectProtocol?
 
     init() {
@@ -47,20 +47,20 @@ final class MoshSession {
 
     deinit {
         winSizePtr.deallocate()
-        if let obs = backgroundObserver { NotificationCenter.default.removeObserver(obs) }
         if let obs = foregroundObserver { NotificationCenter.default.removeObserver(obs) }
     }
 
-    func connect(info: ConnectInfo, sshPrivateKey: String,
-                 cols: Int, rows: Int) async throws {
+    func connect(info: ConnectInfo, cols: Int, rows: Int) async throws {
         let alreadyConnected = sessionQueue.sync { isConnected }
         guard !alreadyConnected else { throw SessionError.alreadyConnected }
 
         // Set initial terminal size
-        winSizePtr.pointee.ws_col = UInt16(cols)
-        winSizePtr.pointee.ws_row = UInt16(rows)
-        winSizePtr.pointee.ws_xpixel = 0
-        winSizePtr.pointee.ws_ypixel = 0
+        sessionQueue.sync {
+            winSizePtr.pointee.ws_col = UInt16(cols)
+            winSizePtr.pointee.ws_row = UInt16(rows)
+            winSizePtr.pointee.ws_xpixel = 0
+            winSizePtr.pointee.ws_ypixel = 0
+        }
 
         // Input pipe: Swift → mosh (fds[0] = read end, fds[1] = write end)
         var inputFDs: [Int32] = [0, 0]
@@ -103,10 +103,16 @@ final class MoshSession {
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 tid = pthread_self()
                 self?.moshPThread = tid
+
                 continuation.resume()
+
                 // Apply any resize that arrived before the thread was ready
-                if let pending = self?.pendingResize {
+                let pending: (cols: Int, rows: Int)? = self?.sessionQueue.sync {
+                    let p = self?.pendingResize
                     self?.pendingResize = nil
+                    return p
+                }
+                if let pending = pending {
                     self?.resize(cols: pending.cols, rows: pending.rows)
                 }
 
@@ -150,12 +156,17 @@ final class MoshSession {
     }
 
     func resize(cols: Int, rows: Int) {
-        winSizePtr.pointee.ws_col = UInt16(cols)
-        winSizePtr.pointee.ws_row = UInt16(rows)
-        if let tid = moshPThread {
+        // Capture thread id before entering the queue so pthread_kill is not called under the lock
+        let tid = moshPThread
+        sessionQueue.sync {
+            winSizePtr.pointee.ws_col = UInt16(cols)
+            winSizePtr.pointee.ws_row = UInt16(rows)
+            if tid == nil {
+                pendingResize = (cols, rows)
+            }
+        }
+        if let tid = tid {
             pthread_kill(tid, SIGWINCH)
-        } else {
-            pendingResize = (cols, rows)
         }
     }
 
@@ -177,13 +188,6 @@ final class MoshSession {
     }
 
     func observeAppLifecycle() {
-        backgroundObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification,
-            object: nil, queue: .main
-        ) { [weak self] _ in
-            _ = self
-        }
-
         foregroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
             object: nil, queue: .main

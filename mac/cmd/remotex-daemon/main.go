@@ -32,8 +32,7 @@ func main() {
 		var err error
 		tailscaleAddr, err = resolveTailscaleAddr()
 		if err != nil {
-			log.Printf("warn: tailscale interface not found, binding to all interfaces: %v", err)
-			tailscaleAddr = "0.0.0.0"
+			log.Fatalf("tailscale interface not found: %v\nIs Tailscale running? Start it, then restart the daemon.", err)
 		}
 	}
 
@@ -69,7 +68,7 @@ func resolveTailscaleAddr() (string, error) {
 				continue
 			}
 			ip4 := ipnet.IP.To4()
-			if ip4 != nil && ip4[0] == 100 {
+			if ip4 != nil && ip4[0] == 100 && ip4[1] >= 64 && ip4[1] <= 127 {
 				return ip4.String(), nil
 			}
 		}

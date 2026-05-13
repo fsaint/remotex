@@ -62,13 +62,17 @@ func (m *Manager) Update(name string, fn func(*Session)) bool {
 }
 
 func (m *Manager) Save() error {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	data, err := json.MarshalIndent(m.sessions, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(m.path, data, 0600)
+	tmp := m.path + ".tmp"
+	if err := os.WriteFile(tmp, data, 0600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, m.path)
 }
 
 func (m *Manager) Load() error {

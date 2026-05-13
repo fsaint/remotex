@@ -12,7 +12,7 @@ func TestStartAndStop(t *testing.T) {
 		t.Skip("mosh-server not installed")
 	}
 
-	info, err := mosh.Start([]string{"echo", "hello"})
+	info, err := mosh.Start("", []string{"echo", "hello"})
 	if err != nil {
 		t.Fatalf("Start: %v", err)
 	}
