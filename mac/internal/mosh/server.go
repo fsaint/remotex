@@ -1,6 +1,7 @@
 package mosh
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -16,8 +17,11 @@ type ServerInfo struct {
 	PID  int
 }
 
-var connectRe = regexp.MustCompile(`MOSH CONNECT (\d+) ([A-Za-z0-9/+]{22,24})`)
-var pidRe = regexp.MustCompile(`\[mosh-server detached, pid = (\d+)\]`)
+// connectRe matches "MOSH CONNECT <port> <key>". Key charset covers standard and URL-safe base64.
+var connectRe = regexp.MustCompile(`MOSH CONNECT (\d+) ([A-Za-z0-9/+=-]{22,44})`)
+
+// pidRe matches "pid = N" anywhere in the output to tolerate minor version differences.
+var pidRe = regexp.MustCompile(`pid\s*=\s*(\d+)`)
 
 // Start spawns mosh-server bound to bindIP with the given command args and returns its connection info.
 // bindIP should be the Tailscale interface address so mosh only accepts UDP on that interface.
@@ -31,11 +35,13 @@ func Start(bindIP string, cmdArgs []string) (*ServerInfo, error) {
 		args = append(args, "--")
 		args = append(args, cmdArgs...)
 	}
-	cmd := exec.Command("mosh-server", args...)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "mosh-server", args...)
 
 	// mosh-server prints "MOSH CONNECT <port> <key>" to stdout and
-	// "[mosh-server detached, pid = N]" to stderr, then exits 0.
-	// Use CombinedOutput so we capture both streams.
+	// "[...pid = N]" to stderr, then exits 0.
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// Don't include raw output — it may contain the MOSH CONNECT key.
@@ -54,11 +60,11 @@ func Start(bindIP string, cmdArgs []string) (*ServerInfo, error) {
 	// Give mosh-server a moment to finish daemonizing
 	time.Sleep(200 * time.Millisecond)
 
-	// Find the pid from output
-	pid := 0
-	if pidMatch := pidRe.FindStringSubmatch(output); pidMatch != nil {
-		pid, _ = strconv.Atoi(pidMatch[1])
+	pidMatch := pidRe.FindStringSubmatch(output)
+	if pidMatch == nil {
+		return nil, fmt.Errorf("mosh-server started but could not parse PID from output")
 	}
+	pid, _ := strconv.Atoi(pidMatch[1])
 
 	return &ServerInfo{Port: port, Key: key, PID: pid}, nil
 }

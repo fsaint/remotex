@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -12,10 +13,21 @@ import (
 	"github.com/fsaint/remotex/internal/session"
 )
 
+var validSessionName = regexp.MustCompile(`^[A-Za-z0-9._-]{1,64}$`)
+
 type registerRequest struct {
 	Name      string    `json:"name"`
 	TmuxPID   int       `json:"tmux_pid"`
 	StartedAt time.Time `json:"started_at"`
+}
+
+// sessionListItem is the API DTO for GET /sessions — omits the live mosh_key.
+type sessionListItem struct {
+	Name      string    `json:"name"`
+	TmuxPID   int       `json:"tmux_pid"`
+	MoshPort  int       `json:"mosh_port,omitempty"`
+	StartedAt time.Time `json:"started_at"`
+	Status    string    `json:"status"`
 }
 
 func (s *Server) handleRegisterSession(w http.ResponseWriter, r *http.Request) {
@@ -25,8 +37,8 @@ func (s *Server) handleRegisterSession(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	if strings.TrimSpace(req.Name) == "" {
-		http.Error(w, "name required", http.StatusBadRequest)
+	if strings.TrimSpace(req.Name) == "" || !validSessionName.MatchString(req.Name) {
+		http.Error(w, "name must match ^[A-Za-z0-9._-]{1,64}$", http.StatusBadRequest)
 		return
 	}
 	s.mgr.Add(&session.Session{
@@ -59,8 +71,18 @@ func (s *Server) handleUnregisterSession(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleListSessions(w http.ResponseWriter, r *http.Request) {
 	sessions := s.mgr.List()
+	items := make([]sessionListItem, len(sessions))
+	for i, sess := range sessions {
+		items[i] = sessionListItem{
+			Name:      sess.Name,
+			TmuxPID:   sess.TmuxPID,
+			MoshPort:  sess.MoshPort,
+			StartedAt: sess.StartedAt,
+			Status:    sess.Status,
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(sessions)
+	json.NewEncoder(w).Encode(items)
 }
 
 type connectResponse struct {

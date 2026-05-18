@@ -187,14 +187,15 @@ final class MoshSession {
         }
     }
 
-    func observeAppLifecycle() {
+    func observeAppLifecycle(sizeProvider: @escaping () -> (cols: Int, rows: Int)?) {
         foregroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.willEnterForegroundNotification,
             object: nil, queue: .main
         ) { [weak self] _ in
             guard let self, self.outputReadHandle != nil else { return }
-            let size = TerminalSizeHelper.size(for: UIScreen.main.bounds)
-            self.resize(cols: size.cols, rows: size.rows)
+            if let size = sizeProvider() {
+                self.resize(cols: size.cols, rows: size.rows)
+            }
         }
     }
 }
