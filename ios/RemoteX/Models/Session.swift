@@ -29,11 +29,11 @@ struct Session: Codable, Identifiable, Hashable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         name      = try c.decode(String.self, forKey: .name)
-        tmuxPID   = try c.decode(Int.self,    forKey: .tmuxPID)
-        moshPID   = try c.decodeIfPresent(Int.self,    forKey: .moshPID)  ?? 0
-        moshPort  = try c.decodeIfPresent(Int.self,    forKey: .moshPort) ?? 0
-        moshKey   = try c.decodeIfPresent(String.self, forKey: .moshKey)  ?? ""
-        startedAt = try c.decode(Date.self,   forKey: .startedAt)
+        tmuxPID   = try c.decodeIfPresent(Int.self,    forKey: .tmuxPID)    ?? 0
+        moshPID   = try c.decodeIfPresent(Int.self,    forKey: .moshPID)   ?? 0
+        moshPort  = try c.decodeIfPresent(Int.self,    forKey: .moshPort)  ?? 0
+        moshKey   = try c.decodeIfPresent(String.self, forKey: .moshKey)   ?? ""
+        startedAt = try c.decodeIfPresent(Date.self,   forKey: .startedAt) ?? Date()
         status    = try c.decode(Status.self, forKey: .status)
     }
 }

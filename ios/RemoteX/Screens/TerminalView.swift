@@ -146,7 +146,11 @@ final class TerminalViewWithMosh: UIView {
 
         terminalView.terminalDelegate = self
         moshSession.outputHandler = self
-        moshSession.observeAppLifecycle()
+        moshSession.observeAppLifecycle { [weak self] in
+            guard let self else { return nil }
+            let t = self.terminalView.getTerminal()
+            return (cols: t.cols, rows: t.rows)
+        }
 
         NotificationCenter.default.addObserver(
             self,

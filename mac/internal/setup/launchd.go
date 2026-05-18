@@ -63,6 +63,8 @@ func InstallLaunchd(daemonBinaryPath string) error {
 		return fmt.Errorf("render plist: %w", err)
 	}
 
+	// Unload any existing agent before loading to make InstallLaunchd idempotent.
+	exec.Command("launchctl", "unload", plistPath).Run() // best-effort
 	if err := exec.Command("launchctl", "load", plistPath).Run(); err != nil {
 		return fmt.Errorf("launchctl load: %w", err)
 	}

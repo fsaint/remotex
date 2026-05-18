@@ -17,7 +17,11 @@ func NewSession(name string) (int, error) {
 
 // KillSession kills an existing tmux session.
 func KillSession(name string) error {
-	return exec.Command("tmux", "kill-session", "-t", name).Run()
+	out, err := exec.Command("tmux", "kill-session", "-t", name).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("tmux kill-session: %w; output: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 // SessionExists reports whether a named session is running.
